@@ -86,7 +86,7 @@ Once the algorithm is implemented in Python:
 - Also the total utilized area of one's design.
 
 # Report
-Link to overleaf document: [report]().
+Link to overleaf document: [report](https://www.overleaf.com/2341325728xzbrcdhtqtpd).
 
 | Done                 | Part                                      |
 | -------------------- | ----------------------------------------- |
