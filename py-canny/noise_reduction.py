@@ -58,6 +58,7 @@ def denoise(in_image, size_kernel=3, sigma=1):
     kernel = gauss_kernel(size_kernel, sigma)
 
     # Apply the kernel as a convolution through the filter2D function
+    # -1 means that the output image will have the same depth as the input image
     filtered_image = cv2.filter2D(in_image, -1, kernel)
     return filtered_image
 
