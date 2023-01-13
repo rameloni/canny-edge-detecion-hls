@@ -35,11 +35,11 @@ The codes must be provided in such a manner to allow for quick download to the P
 
 | Done                 | Stage                       | Function Name                | Tested on Pynq       |
 | -------------------- | --------------------------- | ---------------------------- | -------------------- |
-| :heavy_large_square: | Noise reduction             | *noise_reduction.py*         | :white_large_square: |
-| :heavy_large_square: | Gradient calculation        | *grad_calc.py*               | :white_large_square: |
-| :heavy_large_square: | Non-maximum suppression     | *non_maximum_suppression.py* | :white_large_square: |
-| :heavy_large_square: | Double threshold            | *double_thresh.py*           | :white_large_square: |
-| :heavy_large_square: | Edge Tracking by Hysteresis | *edge_tracking.py*           | :white_large_square: |
+| :heavy_check_mark:   | Noise reduction             | *noise_reduction.py*         | :white_large_square: |
+| :heavy_check_mark:   | Gradient calculation        | *grad_calc.py*               | :white_large_square: |
+| :heavy_check_mark:   | Non-maximum suppression     | *non_maximum_suppression.py* | :white_large_square: |
+| :heavy_check_mark:   | Double threshold            | *double_thresh.py*           | :white_large_square: |
+| :heavy_check_mark:   | Edge Tracking by Hysteresis | *edge_tracking.py*           | :white_large_square: |
 
 ## Other details
 - Video examples on the PYNQ can be used as a starting point.
