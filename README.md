@@ -55,7 +55,7 @@ Once the algorithm is implemented in Python:
 # Hardware
 | Done                 | Stage                       | Block Name                                    | Tested on Pynq       |
 | -------------------- | --------------------------- | --------------------------------------------- | -------------------- |
-| :white_large_square: | Noise reduction             | *Put here the HLS block name (to keep track)* | :white_large_square: |
+| :heavy_large_square: | Noise reduction             | *noise_reduction.py* | :white_large_square: |
 | :white_large_square: | Gradient calculation        | *Put here the HLS block name (to keep track)* | :white_large_square: |
 | :white_large_square: | Non-maximum suppression     | *Put here the HLS block name (to keep track)* | :white_large_square: |
 | :white_large_square: | Double threshold            | *Put here the HLS block name (to keep track)* | :white_large_square: |
