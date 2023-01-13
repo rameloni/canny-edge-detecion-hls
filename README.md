@@ -33,13 +33,13 @@ The codes must be provided in such a manner to allow for quick download to the P
 # Software
 <!-- :white_large_square: and :heavy_check_mark: -->
 
-| Done                 | Stage                       | Function Name                                       | Tested on Pynq       |
-| -------------------- | --------------------------- | --------------------------------------------------- | -------------------- |
-| :white_large_square: | Noise reduction             | *Put here the python function name (to keep track)* | :white_large_square: |
-| :white_large_square: | Gradient calculation        | *Put here the python function name (to keep track)* | :white_large_square: |
-| :white_large_square: | Non-maximum suppression     | *Put here the python function name (to keep track)* | :white_large_square: |
-| :white_large_square: | Double threshold            | *Put here the python function name (to keep track)* | :white_large_square: |
-| :white_large_square: | Edge Tracking by Hysteresis | *Put here the python function name (to keep track)* | :white_large_square: |
+| Done                 | Stage                       | Function Name                | Tested on Pynq       |
+| -------------------- | --------------------------- | ---------------------------- | -------------------- |
+| :heavy_large_square: | Noise reduction             | *noise_reduction.py*         | :white_large_square: |
+| :heavy_large_square: | Gradient calculation        | *grad_calc.py*               | :white_large_square: |
+| :heavy_large_square: | Non-maximum suppression     | *non_maximum_suppression.py* | :white_large_square: |
+| :heavy_large_square: | Double threshold            | *double_thresh.py*           | :white_large_square: |
+| :heavy_large_square: | Edge Tracking by Hysteresis | *edge_tracking.py*           | :white_large_square: |
 
 ## Other details
 - Video examples on the PYNQ can be used as a starting point.
@@ -55,7 +55,7 @@ Once the algorithm is implemented in Python:
 # Hardware
 | Done                 | Stage                       | Block Name                                    | Tested on Pynq       |
 | -------------------- | --------------------------- | --------------------------------------------- | -------------------- |
-| :heavy_large_square: | Noise reduction             | *noise_reduction.py* | :white_large_square: |
+| :white_large_square: | Noise reduction             | *Put here the HLS block name (to keep track)* | :white_large_square: |
 | :white_large_square: | Gradient calculation        | *Put here the HLS block name (to keep track)* | :white_large_square: |
 | :white_large_square: | Non-maximum suppression     | *Put here the HLS block name (to keep track)* | :white_large_square: |
 | :white_large_square: | Double threshold            | *Put here the HLS block name (to keep track)* | :white_large_square: |
@@ -95,3 +95,15 @@ Link to overleaf document: [report](https://www.overleaf.com/2341325728xzbrcdhtq
 | :white_large_square: | Experimental results                      |
 | :white_large_square: | Reflection on chosen approach             |
 | :white_large_square: | Reflection on achievements                |
+
+
+# Image comparisons
+
+|                  |                                                                        |                                                                        |                                                              |                                                                                    |
+| ---------------- | :--------------------------------------------------------------------: | :--------------------------------------------------------------------: | :----------------------------------------------------------: | :--------------------------------------------------------------------------------: |
+| Origin           |        ![picture-1](py-canny/pictures/origin/Noise-Image.1.jpg)        |        ![picture-2](py-canny/pictures/origin/Noise-Image.2.png)        |        ![picture-3](py-canny/pictures/origin/img.png)        |        ![picture-4](py-canny/pictures/origin/double-thresholding-image.png)        |
+| Denoised         |  ![picture-1](py-canny/pictures/1_denoise/denoised-Noise-Image.1.jpg)  |  ![picture-2](py-canny/pictures/1_denoise/denoised-Noise-Image.2.png)  |  ![picture-3](py-canny/pictures/1_denoise/denoised-img.png)  |  ![picture-4](py-canny/pictures/1_denoise/denoised-double-thresholding-image.png)  |
+| Sobel            |    ![picture-1](py-canny/pictures/2_sobel/sobel-Noise-Image.1.jpg)     |    ![picture-2](py-canny/pictures/2_sobel/sobel-Noise-Image.2.png)     |    ![picture-3](py-canny/pictures/2_sobel/sobel-img.png)     |    ![picture-4](py-canny/pictures/2_sobel/sobel-double-thresholding-image.png)     |
+| Non max          | ![picture-1](py-canny/pictures/3_non_max/non_max_supNoise-Image.1.jpg) | ![picture-2](py-canny/pictures/3_non_max/non_max_supNoise-Image.2.png) | ![picture-3](py-canny/pictures/3_non_max/non_max_supimg.png) | ![picture-4](py-canny/pictures/3_non_max/non_max_supdouble-thresholding-image.png) |
+| Double threshold |   ![picture-1](py-canny/pictures/4_thresh/thresh-Noise-Image.1.jpg)    |   ![picture-2](py-canny/pictures/4_thresh/thresh-Noise-Image.2.png)    |   ![picture-3](py-canny/pictures/4_thresh/thresh-img.png)    |   ![picture-4](py-canny/pictures/4_thresh/thresh-double-thresholding-image.png)    |
+| Canny final      |    ![picture-1](py-canny/pictures/5_canny/canny-Noise-Image.1.jpg)     |    ![picture-2](py-canny/pictures/5_canny/canny-Noise-Image.2.png)     |    ![picture-3](py-canny/pictures/5_canny/canny-img.png)     |    ![picture-4](py-canny/pictures/5_canny/canny-double-thresholding-image.png)     |
