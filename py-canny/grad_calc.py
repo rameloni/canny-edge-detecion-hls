@@ -12,8 +12,9 @@ def sobel_filter(image):
 
     img_sobel = np.sqrt(np.square(Ix) + np.square(Iy))
     img_sobel = (img_sobel / np.max(img_sobel)) * 255
-
-    return img_sobel
+    print(Iy.shape)
+    theta = np.arctan2(Iy, Ix)
+    return (img_sobel, theta)
 
 
 if __name__ == '__main__':

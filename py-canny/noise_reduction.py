@@ -62,15 +62,16 @@ def denoise(in_image, size_kernel=3, sigma=1):
     filtered_image = cv2.filter2D(in_image, -1, kernel)
     return filtered_image
 
-# SCRIPT
-# Read the image
-image = cv2.imread('pictures/Noise-Image.1.jpg')
-# Convert the image to grayscale
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-# Denoise the image
-out_image = denoise(gray)
-# Save the image
-cv2.imwrite('pictures/gauss-Image.1.jpg', out_image)
+if __name__ == '__main__':
+    # SCRIPT
+    # Read the image
+    image = cv2.imread('pictures/Noise-Image.1.jpg')
+    # Convert the image to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Denoise the image
+    out_image = denoise(gray)
+    # Save the image
+    cv2.imwrite('pictures/gauss-Image.1.jpg', out_image)
 
-# Denoise the image manually (without using the filter2D function) in order to compare the results
-cv2.imwrite('pictures/gauss-Image-manual-conv.1.jpg', denoise_conv_manual(gray))
+    # Denoise the image manually (without using the filter2D function) in order to compare the results
+    cv2.imwrite('pictures/gauss-Image-manual-conv.1.jpg', denoise_conv_manual(gray))

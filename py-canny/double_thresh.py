@@ -23,7 +23,7 @@ def threshold(img, lowThresholdRatio = 0.05, highThresholdRatio = 0.09):
     res[strong_i, strong_j] = strong
     res[weak_i, weak_j] = weak
     
-    return res
+    return (res, weak, strong)
 
 if __name__ == '__main__':
     img = Image.open("C:\\Users\\amirr\\Desktop\\Education\\TU Delft\\Q2\\Reconfigurable Computing Design\\edgedetection1.jpg")
@@ -32,9 +32,9 @@ if __name__ == '__main__':
     img_arr = cv2.cvtColor(img_arr, cv2.COLOR_BGR2GRAY)
     # img_arr = cv2.fastNlMeansDenoising(img_arr, None, 20, 7, 21) 
 
-    img_sobel = sobel_filter(img_arr)
+    img_sobel, theta = sobel_filter(img_arr)
 
-    img_dt = threshold(img_sobel)
+    img_dt, weak, strong = threshold(img_sobel)
     
 
     plt.subplot(1, 3, 1)

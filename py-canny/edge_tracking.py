@@ -38,15 +38,15 @@ def edge_tracking(in_image, weak, strong):
     
     return in_image
 
-
-# Path: edge_detection.py
-# Read the image
-img = cv2.imread('pictures/double-thresholding-image.png')
-# Convert the image to grayscale
-img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-# Apply the edge detection
-img_edge = edge_tracking(img_gray, 50, 100)
-# Show the image    
-cv2.imshow('Edge detection', img_edge)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+if __name__ == '__main__':
+    # Path: edge_detection.py
+    # Read the image
+    img = cv2.imread('pictures/double-thresholding-image.png')
+    # Convert the image to grayscale
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Apply the edge detection
+    img_edge = edge_tracking(img_gray, 50, 100)
+    # Show the image    
+    cv2.imshow('Edge detection', img_edge)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()

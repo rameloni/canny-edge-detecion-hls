@@ -56,14 +56,14 @@ def non_max_sup(img, D):
                 res[i,j] = 0
     return res
 
-
-img = cv2.imread("img.png")
-img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-# img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-(img, theta) = sobel_filter(img)
-for i in range(1,img.shape[1]-1):
-    print(i)
-res_img = non_max_sup(img, theta)
-print(res_img)
-plt.imshow(res_img, cmap = 'gray')
-plt.show()
+if __name__ == '__main__':
+    img = cv2.imread("img.png")
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    (img, theta) = sobel_filter(img)
+    for i in range(1,img.shape[1]-1):
+        print(i)
+    res_img = non_max_sup(img, theta)
+    print(res_img)
+    plt.imshow(res_img, cmap = 'gray')
+    plt.show()
