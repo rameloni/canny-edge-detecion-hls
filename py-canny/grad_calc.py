@@ -2,18 +2,45 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from PIL import Image
-
+from scipy import ndimage
 def sobel_filter(image):
+
+    # Apply Sobelx in high output datatype 'float32'
+    # and then converting back to 8-bit to prevent overflow
+    sobelx_64 = cv2.Sobel(image,cv2.CV_32F,1,0,ksize=3)
+    absx_64 = np.absolute(sobelx_64)
+    sobelx_8u1 = absx_64/absx_64.max()*255
+    sobelx_8u = np.uint8(sobelx_8u1)
+
+    # Similarly for Sobely
+    sobely_64 = cv2.Sobel(image,cv2.CV_32F,0,1,ksize=3)
+    absy_64 = np.absolute(sobely_64)
+    sobely_8u1 = absy_64/absy_64.max()*255
+    sobely_8u = np.uint8(sobely_8u1)
+
+    # From gradients calculate the magnitude and changing
+    # it to 8-bit (Optional)
+    mag = np.hypot(sobelx_8u, sobely_8u)
+    mag = mag/mag.max()*255
+    mag = np.uint8(mag)
+
+    # Find the direction and change it to degree
+    theta = np.arctan2(sobely_64, sobelx_64)
+    return (mag, theta)
+    
     Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
-    Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
+    Ky = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], np.float32)
 
     Ix = cv2.filter2D(image, -1, Kx)
     Iy = cv2.filter2D(image, -1, Ky)
 
-    img_sobel = np.sqrt(np.square(Ix) + np.square(Iy))
-    img_sobel = (img_sobel / np.max(img_sobel)) * 255
-    print(Iy.shape)
+    # img_sobel = np.sqrt(np.square(Ix) + np.square(Iy))
+    img_sobel = np.hypot(Ix, Iy)
+    img_sobel = img_sobel / np.max(img_sobel) * 255
+    # print(Iy.shape)
     theta = np.arctan2(Iy, Ix)
+
+
     return (img_sobel, theta)
 
 

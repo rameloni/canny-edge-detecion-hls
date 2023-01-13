@@ -38,6 +38,7 @@ def edge_tracking(in_image, weak, strong):
     
     return in_image
 
+    return strong_edges
 if __name__ == '__main__':
     # Path: edge_detection.py
     # Read the image

@@ -4,16 +4,16 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from grad_calc import sobel_filter
 
-def threshold(img, lowThresholdRatio = 0.05, highThresholdRatio = 0.09):
+def threshold(img, lowThresholdRatio = 0.5, highThresholdRatio = 0.17):
     
     highThreshold = img.max() * highThresholdRatio
     lowThreshold = highThreshold * lowThresholdRatio
     
     M, N = img.shape
-    res = np.zeros((M,N), dtype=np.int32)
+    res = np.zeros((M,N), dtype=np.uint8)
     
-    weak = np.int32(25)
-    strong = np.int32(255)
+    weak = np.uint8(75)
+    strong = np.uint8(255)
     
     strong_i, strong_j = np.where(img >= highThreshold)
     zeros_i, zeros_j = np.where(img < lowThreshold)
@@ -22,7 +22,7 @@ def threshold(img, lowThresholdRatio = 0.05, highThresholdRatio = 0.09):
     
     res[strong_i, strong_j] = strong
     res[weak_i, weak_j] = weak
-    
+    # res[zeros_i, zeros_j] = 0
     return (res, weak, strong)
 
 if __name__ == '__main__':

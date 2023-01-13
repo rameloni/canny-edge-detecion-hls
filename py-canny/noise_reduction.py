@@ -18,14 +18,19 @@ def gauss_kernel(size_kernel=3, sigma=1):
     # Get the center of the kernel
     center = size_kernel // 2
 
+    normal = 1 / (2.0 * np.pi * sigma**2)
     # Fill the kernel
     for i in range(size_kernel):
         for j in range(size_kernel):
             x, y = i - center, j - center
-            kernel[i, j] = np.exp(-(x**2 + y**2) / (2*sigma**2))
+            kernel[i, j] = np.exp(-(x**2+ y**2) / (2.0*sigma**2))
 
+    # x, y = np.mgrid[-size_kernel:size_kernel+1, -size_kernel:size_kernel+1]
+    # g =  np.exp(-((x**2 + y**2) / (2.0*sigma**2))) * normal
+    # return g
     # Normalize the kernel
-    return kernel / kernel.sum()
+    return kernel *normal
+    # return kernel * normal
 
     
 # This function performs the noise reduction.
@@ -53,13 +58,15 @@ def denoise_conv_manual(in_image, size_kernel=3, sigma=1):
     
     return filtered_image
 
-def denoise(in_image, size_kernel=3, sigma=1):
+def denoise(in_image, size_kernel=5, sigma=1):
      # Create a kernel
     kernel = gauss_kernel(size_kernel, sigma)
 
     # Apply the kernel as a convolution through the filter2D function
     # -1 means that the output image will have the same depth as the input image
     filtered_image = cv2.filter2D(in_image, -1, kernel)
+    # cv2.fastNlMeansDenoising(in_image, filtered_image, 10, 7, 21)
+    # return cv2.GaussianBlur(in_image, (size_kernel, size_kernel), sigma)
     return filtered_image
 
 if __name__ == '__main__':

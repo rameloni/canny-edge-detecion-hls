@@ -2,21 +2,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-
-
-def sobel_filter(image):
-    Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
-    Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
-
-    Ix = cv2.filter2D(image, -1, Kx)
-    Iy = cv2.filter2D(image, -1, Ky)
-
-    img_sobel = np.sqrt(np.square(Ix) + np.square(Iy))
-    img_sobel = (img_sobel / np.max(img_sobel)) * 255
-    print(Iy.shape)
-    theta = np.arctan2(Iy, Ix)
-    return (img_sobel,theta)
-
+from grad_calc import sobel_filter
 
 
 
@@ -24,18 +10,21 @@ def non_max_sup(img, D):
     # pass
 
     x,y = img.shape
-    res = np.zeros((x, y), dtype=np.int32)
-    print(x, y)
-    angle = D * 180. / np.pi
+    res = np.zeros((x, y), dtype=np.uint8)
+    # print(x, y)
+    angle = D * 180.0 / np.pi
     # for i in angle:
     #     if i < 0:
     #         i += 180
     print(res.shape)
+    angle = np.rad2deg(D)
+    
     angle[angle < 0] += 180
+    
     for i in range(1, x-1):
         for j in range(1, y-1):
-            ref1 = 255
-            ref2 = 255
+            # ref1 = 255
+            # ref2 = 255
             # 0 swing 45
             if (0 <= angle[i,j] < 22.5) or (157.5 <= angle[i,j] <= 180):
                 ref1 = img[i, j+1]
