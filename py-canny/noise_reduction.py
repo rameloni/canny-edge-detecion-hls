@@ -29,7 +29,7 @@ def gauss_kernel(size_kernel=3, sigma=1):
     # g =  np.exp(-((x**2 + y**2) / (2.0*sigma**2))) * normal
     # return g
     # Normalize the kernel
-    return kernel *normal
+    return kernel / kernel.sum()
     # return kernel * normal
 
     

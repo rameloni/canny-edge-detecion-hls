@@ -35,7 +35,7 @@ if __name__ == '__main__':
         if not os.path.exists(outpath):
             os.makedirs(outpath)
 
-        img_den = denoise(img, size_kernel=11)
+        img_den = denoise(img, size_kernel=5)
         cv2.imwrite(outpath+'denoised-'+filename, img_den)
 
         ####################################################

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from grad_calc import sobel_filter
 
-def threshold(img, lowThresholdRatio = 0.5, highThresholdRatio = 0.17):
+def threshold(img, lowThresholdRatio = 0.5, highThresholdRatio = 0.12):
     
     highThreshold = img.max() * highThresholdRatio
     lowThreshold = highThreshold * lowThresholdRatio

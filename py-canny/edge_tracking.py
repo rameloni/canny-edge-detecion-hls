@@ -23,15 +23,15 @@ def edge_tracking(in_image, weak, strong):
     for i in range(1, rows-1):
         for j in range(1, cols-1):
             # If the pixel is strong
-            if in_image[i, j] == strong:
-                in_image[i, j] = 255
+            # if in_image[i, j] == strong:
+            #     in_image[i, j] = 255
             # If the pixel is weak
-            elif in_image[i, j] == weak:
+            if in_image[i, j] == weak:
                 # Check if the pixel is connected to a strong pixel
                 if (in_image[i+1, j-1] == strong or in_image[i+1, j] == strong or in_image[i+1, j+1] == strong or
                     in_image[i, j-1] == strong or in_image[i, j+1] == strong or
                     in_image[i-1, j-1] == strong or in_image[i-1, j] == strong or in_image[i-1, j+1] == strong):
-                    in_image[i, j] = 255
+                    in_image[i, j] = strong
                 # If not, set the black pixel
                 else:
                     in_image[i, j] = 0
