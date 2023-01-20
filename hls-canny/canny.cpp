@@ -70,20 +70,17 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 #pragma HLS PIPELINE II = 1
 
 	// Data to be stored across 'function calls'
-	static uint16_t x = 0;		 // X coordinate --> cols
-	static uint16_t y = 0;		 // Y coordinate
-	static uint8_t y_window = 0; // window y counter index
+	static uint16_t x = 0; // X coordinate --> cols
+	static uint16_t y = 0; // Y coordinate
 
 	// Buffer to store the pixel values (to be used in the convolution)
 	static uint32_t buffer[GAUSSIAN_MASK_SIZE][WIDTH]; // Gaussian mask
 
 	// Window is used to perform the convolution in parallel
-	uint8_t window[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE]; // Window
+	uint32_t window[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE]; // Window
 
 	pixel_data p_in;
 
-	static int x_buff_size = 0;
-	static int y_buff_size = 0;
 	// Load input data from source
 	src >> p_in;
 
@@ -99,41 +96,63 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 	uint8_t pixel = rgba2r(p_in.data);
 	// Store pixel value in buffer
 	if (x < WIDTH)
-	{
-		y_buff_size++;
 		// Store the pixel value in the buffer
 		buffer[y % GAUSSIAN_MASK_SIZE][x] = pixel;
 
-		// Start computing the wi
-	}
-
 	// Check if we have enough data to perform the convolution
-	if (y >= GAUSSIAN_MASK_SIZE - 1 && x >= GAUSSIAN_MASK_SIZE - 1)
+	if (y >= GAUSSIAN_MASK_SIZE - 1)
 	{
 
 		// Perform convolution
 		// Final pixel value
 		uint32_t _pixel = 0;
 
+		// Perform the multiplication step
 		for (int i = 0; i < GAUSSIAN_MASK_SIZE; i++)
+#pragma HLS unroll
 			for (int j = 0; j < GAUSSIAN_MASK_SIZE; j++)
-				_pixel += buffer[(y - (GAUSSIAN_MASK_SIZE - 1 - i)) % GAUSSIAN_MASK_SIZE][x - (GAUSSIAN_MASK_SIZE - 1 - j)] * GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE - 1 - i][GAUSSIAN_MASK_SIZE - 1 - j];
+#pragma HLS unroll
+				window[i][j] = buffer[(y - (GAUSSIAN_MASK_SIZE - 1 - i)) % GAUSSIAN_MASK_SIZE][x - (GAUSSIAN_MASK_SIZE - 1 - j)] * GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE - 1 - i][GAUSSIAN_MASK_SIZE - 1 - j];
+		// window[i][j] = buffer[(y - i)) % GAUSSIAN_MASK_SIZE][x - i] * GAUSSIAN_MASK[i][j];
+
+		// Sum all the values in the window
+		for (int i = 0; i < GAUSSIAN_MASK_SIZE; i++)
+#pragma HLS unroll
+			for (int j = 0; j < GAUSSIAN_MASK_SIZE; j++)
+#pragma HLS unroll
+				_pixel += window[i][j];
+
+		// Sequential implementation
+		// for (int i = 0; i < GAUSSIAN_MASK_SIZE; i++)
+		// #pragma HLS unroll
+		// 	for (int j = 0; j < GAUSSIAN_MASK_SIZE; j++)
+		// #pragma HLS unroll
+		// 		_pixel += buffer[(y - (GAUSSIAN_MASK_SIZE - 1 - i)) % GAUSSIAN_MASK_SIZE][x - (GAUSSIAN_MASK_SIZE - 1 - j)] * GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE - 1 - i][GAUSSIAN_MASK_SIZE - 1 - j];
 
 		_pixel = GAUSS_NORMALIZE(_pixel);
-		
+
 		// Set output pixel data
 		p_out.data = r2rgba(_pixel) | g2rgba(_pixel) | b2rgba(_pixel);
+
+		// First output pixel
+		if (x == 0 && y == GAUSSIAN_MASK_SIZE - 1)
+			p_out.user = 1;
+		else
+			p_out.user = 0;
+
+		// Last output pixel
+		if (x == WIDTH - 1 && y == HEIGHT - 1)
+			p_out.last = 1;
+		else
+			p_out.last = 0;
 	}
 
 	// Store the pixel value in the
 
-	////////////////////////////////
-
 	// Write pixel to destination
 	dst << p_out;
 
-	// Copy previous pixel data to next output pixel
-	p_out = p_in;
+	////////////////////////////////
 
 	// Increment X and Y counters
 	if (p_in.last)
@@ -141,20 +160,18 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 		// Stored a row of pixels
 		x = 0;
 		y++;
-
-		if (y >= GAUSSIAN_MASK_SIZE - 1)
-			// move the window down
-			y_window = (y_window + 1) % GAUSSIAN_MASK_SIZE; // the first row of the current window
 	}
 	else
 		x++;
 }
+
+// Stream function
 void stream(pixel_stream &src, pixel_stream &dst, int frame)
 {
-	// rgb2gray
+	// 0. rgb2gray
 	pixel_stream gray;
 	rgb2gray(src, gray);
 
-	// Gaussian blur
+	// 1. Gaussian blur
 	gaussian(gray, dst);
 }

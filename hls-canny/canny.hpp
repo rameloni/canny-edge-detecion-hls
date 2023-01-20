@@ -46,7 +46,6 @@ const uint32_t GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE] = {{11, 53,
                                                                         {11, 53, 88, 53, 11}};
 #endif
 
-
 void canny(pixel_stream &src, pixel_stream &dst);
 
 // Perform a conversion from RGB to grayscale
