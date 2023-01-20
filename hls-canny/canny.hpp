@@ -17,17 +17,35 @@ typedef hls::stream<pixel_data> pixel_stream;
 
 #define GAUSSIAN_MASK_SIZE 5
 
-// const uint32_t GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE] = {{11, 53, 88, 53, 11},
-//                                                                        {53, 239, 139, 239, 53},
-//                                                                        {88, 139, 139, 139, 88},
-//                                                                        {53, 239, 139, 239, 53},
-//                                                                        {11, 53, 88, 53, 11}};
+#define GAUSS_APPROX 1
 
-const uint32_t GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE] = {{0, 0, 0, 0, 0},
-                                                                        {0, 0, 0, 0, 0},
-                                                                        {0, 0, 1, 0, 0},
-                                                                        {0, 0, 0, 0, 0},
-                                                                        {0, 0, 0, 0, 0}};
+// Approximations source: https://www.researchgate.net/publication/325768087_Gaussian_filtering_for_FPGA_based_image_processing_with_High-Level_Synthesis_tools
+#if GAUSS_APPROX == 0
+#define GAUSS_NORMALIZE(pixel) ((pixel) / 273)
+#define GAUSSIAN_MASK_SUM 273
+const uint32_t GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE] = {{1, 4, 7, 4, 1},
+                                                                        {4, 16, 26, 16, 4},
+                                                                        {7, 26, 41, 26, 7},
+                                                                        {4, 16, 26, 16, 4},
+                                                                        {1, 4, 7, 4, 1}};
+#elif GAUSS_APPROX == 1
+#define GAUSS_NORMALIZE(pixel) ((pixel) >> 8)
+#define GAUSSIAN_MASK_SUM 256
+const uint32_t GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE] = {{1, 4, 6, 4, 1},
+                                                                        {4, 16, 24, 16, 4},
+                                                                        {6, 24, 36, 24, 6},
+                                                                        {4, 16, 24, 16, 4},
+                                                                        {1, 4, 6, 4, 1}};
+#elif GAUSS_APPROX == 2
+#define GAUSS_NORMALIZE(pixel) ((pixel) >> 12)
+#define GAUSSIAN_MASK_SUM 4096
+const uint32_t GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE] = {{11, 53, 88, 53, 11},
+                                                                        {53, 239, 139, 239, 53},
+                                                                        {88, 139, 139, 139, 88},
+                                                                        {53, 239, 139, 239, 53},
+                                                                        {11, 53, 88, 53, 11}};
+#endif
+
 
 void canny(pixel_stream &src, pixel_stream &dst);
 

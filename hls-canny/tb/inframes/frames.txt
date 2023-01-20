@@ -1,2 +1,4 @@
-parrot.jpg 2
+bg.jpg 1
+mountain.jpg 1
+parrot.jpg 1
 - 1

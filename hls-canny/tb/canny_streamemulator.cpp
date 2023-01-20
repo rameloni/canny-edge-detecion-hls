@@ -1,15 +1,14 @@
 // Streamulator test platform
 
 #include "canny_streamemulator.h"
-
-
+#include "../canny.hpp"
 /* Load image from file into pixel stream
  *
  * filename - path to input image
  * stream   - output pixel stream
  * rep      - number of times to repeat the image
  */
-void loadFrame (const std::string &filename, pixel_stream &stream, int rep)
+void loadFrame(const std::string &filename, pixel_stream &stream, int rep)
 {
 	cv::Mat srcImg;
 
@@ -25,29 +24,28 @@ void loadFrame (const std::string &filename, pixel_stream &stream, int rep)
 	cv::cvtColor(srcImg, srcImg, CV_BGR2RGBA);
 
 	// Write input data
-	for (int i=0; i<rep; i++)
+	for (int i = 0; i < rep; i++)
 		cvMat2AXIvideo(srcImg, stream);
 }
-
 
 /* Generate frame with a single solid color
  * color  - color in BGR format
  * stream - output pixel stream
  * rep    - number of times to repeat the image
  */
-void fillFrame (int color, pixel_stream &stream, int rep)
+void fillFrame(int color, pixel_stream &stream, int rep)
 {
 	pixel_data pixel;
 
-	for (int row=0; row<HEIGHT; row++)
-		for (int col=0; col<WIDTH; col++)
+	for (int row = 0; row < HEIGHT; row++)
+		for (int col = 0; col < WIDTH; col++)
 		{
 			if (row == 0 && col == 0)
 				pixel.user = 1;
 			else
 				pixel.user = 0;
 
-			if (col == WIDTH-1)
+			if (col == WIDTH - 1)
 				pixel.last = 1;
 			else
 				pixel.last = 0;
@@ -57,13 +55,12 @@ void fillFrame (int color, pixel_stream &stream, int rep)
 		}
 }
 
-
 /* Process image stream
  *
  * src - source (input) stream
  * dst - destination (output) stream
  */
-void processStream (pixel_stream &src, pixel_stream &dst)
+void processStream(pixel_stream &src, pixel_stream &dst)
 {
 	static int pixel = 0;
 	static int frame = 0;
@@ -74,28 +71,27 @@ void processStream (pixel_stream &src, pixel_stream &dst)
 		stream(src, dst, frame);
 
 		pixel++;
-		if (pixel >= WIDTH*HEIGHT)
+		if (pixel >= WIDTH * HEIGHT)
 		{
 			pixel = 0;
 			frame++;
-			//std::cout << "Frame: " << frame << std::endl; // uncomment to see frame progress
+			// std::cout << "Frame: " << frame << std::endl; // uncomment to see frame progress
 		}
 	}
 }
-
 
 /* Save raw pixel stream to file
  *
  * src      - input pixel stream
  * filename - path to output image
  */
-void saveRawStream (pixel_stream &src, const std::string &filename)
+void saveRawStream(pixel_stream &src, const std::string &filename)
 {
 	std::vector<ap_uint<32>> pixeldata;
 	pixel_data pixel;
 
 	// Copy source data
-	while(!src.empty())
+	while (!src.empty())
 	{
 		src >> pixel;
 		pixeldata.push_back(pixel.data | 0xFF000000);
@@ -109,7 +105,6 @@ void saveRawStream (pixel_stream &src, const std::string &filename)
 	cv::imwrite(filename, dstImg);
 }
 
-
 /* Synchronize video stream
  *
  * src - input pixel stream
@@ -117,7 +112,7 @@ void saveRawStream (pixel_stream &src, const std::string &filename)
  *
  * returns number of pixels before sync signal (ie processing delay)
  */
-int syncStream (pixel_stream &src, pixel_stream &dst)
+int syncStream(pixel_stream &src, pixel_stream &dst)
 {
 	pixel_data pixel;
 
@@ -150,13 +145,12 @@ int syncStream (pixel_stream &src, pixel_stream &dst)
 	return i;
 }
 
-
 /* Save a single frame from pixel stream
  *
  * src        - input pixel stream
  * filename   - path to output image
  */
-void saveFrame (pixel_stream &src, const std::string &filename)
+void saveFrame(pixel_stream &src, const std::string &filename)
 {
 	std::vector<ap_uint<32>> pixeldata;
 	pixel_data pixel;
@@ -165,8 +159,8 @@ void saveFrame (pixel_stream &src, const std::string &filename)
 	int missing_last = 0;
 	int rows;
 
-	for (rows=0; rows<HEIGHT; rows++)
-		for (int cols=0; cols<WIDTH; cols++)
+	for (rows = 0; rows < HEIGHT; rows++)
+		for (int cols = 0; cols < WIDTH; cols++)
 		{
 			if (!src.empty()) // don't read from empty stream
 				src >> pixel;
@@ -175,10 +169,8 @@ void saveFrame (pixel_stream &src, const std::string &filename)
 
 			pixeldata.push_back(pixel.data | 0xFF000000); // OR with full alpha channel
 
-			if (cols == WIDTH-1 && pixel.last != 1) // check pixel.last
+			if (cols == WIDTH - 1 && pixel.last != 1) // check pixel.last
 				missing_last++;
-
-
 		}
 endloop:
 
@@ -188,14 +180,13 @@ endloop:
 	// Save image by converting data array to matrix
 	if (!filename.empty())
 	{
-		cv::Mat saveImg(HEIGHT, WIDTH, CV_8UC4, pixeldata.data()); //replace HEIGHT by rows
+		cv::Mat saveImg(HEIGHT, WIDTH, CV_8UC4, pixeldata.data()); // replace HEIGHT by rows
 		cv::cvtColor(saveImg, saveImg, CV_RGBA2BGR);
 		cv::imwrite(filename, saveImg);
 	}
 }
 
-
-int main ()
+int main()
 {
 	pixel_stream srcStream, procStream, syncedStream;
 
@@ -216,12 +207,12 @@ int main ()
 #ifndef RAW_FILENAME
 		delay = syncStream(procStream, syncedStream);
 
-		for (int i=0; i<reps; i++)
+		for (int i = 0; i < reps; i++)
 		{
 			std::ostringstream os;
 			os << OUTPUT_DIR;
 			os << std::setfill('0') << std::setw(4) << frame;
-			os << "_" << filename << ".png";
+			os << "_" << GAUSSIAN_MASK_SUM << "_" << filename << ".png";
 
 			if (filename == "-")
 				saveFrame(syncedStream, "");
@@ -236,8 +227,7 @@ int main ()
 #endif
 
 	std::cout << "HLS delay: " << delay << " pixels"
-			  << " (" << (float)delay/WIDTH << " lines)" << std::endl;
+			  << " (" << (float)delay / WIDTH << " lines)" << std::endl;
 
 	return 0;
 }
-
