@@ -133,18 +133,6 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 
 		// Set output pixel data
 		p_out.data = r2rgba(_pixel) | g2rgba(_pixel) | b2rgba(_pixel);
-
-		// First output pixel
-		if (x == 0 && y == GAUSSIAN_MASK_SIZE - 1)
-			p_out.user = 1;
-		else
-			p_out.user = 0;
-
-		// Last output pixel
-		if (x == WIDTH - 1 && y == HEIGHT - 1)
-			p_out.last = 1;
-		else
-			p_out.last = 0;
 	}
 
 	// Store the pixel value in the
@@ -152,6 +140,8 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 	// Write pixel to destination
 	dst << p_out;
 
+	// Need to change this
+	p_out = p_in;
 	////////////////////////////////
 
 	// Increment X and Y counters
@@ -174,4 +164,6 @@ void stream(pixel_stream &src, pixel_stream &dst, int frame)
 
 	// 1. Gaussian blur
 	gaussian(gray, dst);
+
+	
 }
