@@ -19,6 +19,8 @@ typedef hls::stream<pixel_data> pixel_stream;
 
 #define GAUSS_APPROX 1
 
+#define SOBEL_KERNEL_SIZE 3
+
 // Approximations source: https://www.researchgate.net/publication/325768087_Gaussian_filtering_for_FPGA_based_image_processing_with_High-Level_Synthesis_tools
 #if GAUSS_APPROX == 0
 #define GAUSS_NORMALIZE(pixel) ((pixel) / 273)
@@ -46,6 +48,13 @@ const uint32_t GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE] = {{11, 53,
                                                                         {11, 53, 88, 53, 11}};
 #endif
 
+const int H_SOBEL_KERNEL[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE] = {{ -1,  0, 1},
+        														  { -2,  0, 2},
+																  { -1,  0, 1}};
+
+const int V_SOBEL_KERNEL[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE] = {{ 1,  2,  1},
+        													      { 0,  0,  0},
+																  {-1, -2, -1}};
 void canny(pixel_stream &src, pixel_stream &dst);
 
 // Perform a conversion from RGB to grayscale
@@ -53,3 +62,14 @@ void rgb2gray(pixel_stream &src, pixel_stream &dst);
 
 // Gaussian blur
 void gaussian(pixel_stream &src, pixel_stream &dst);
+
+void Sobel(pixel_stream &src, pixel_stream &dst);
+
+void non_max_sup(pixel_stream &src, pixel_stream &dst);
+
+
+
+
+
+
+
