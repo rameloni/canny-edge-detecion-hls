@@ -200,8 +200,8 @@ void Sobel(pixel_stream &src, pixel_stream &dst)
 
 		// Perform convolution
 		// Final pixel value
-		uint32_t h_pixel = 0;
-		uint32_t v_pixel = 0;
+		int32_t h_pixel = 0;
+		int32_t v_pixel = 0;
 		uint32_t _pixel = 0;
 		// Perform the multiplication step
 		for (int i = 0; i < SOBEL_KERNEL_SIZE; i++)
@@ -227,7 +227,10 @@ void Sobel(pixel_stream &src, pixel_stream &dst)
 			}
 		}
 
-		_pixel = hls::sqrt(float(h_pixel * h_pixel + v_pixel * v_pixel));
+		// Correct
+		// _pixel = hls::sqrt(h_pixel * h_pixel + v_pixel * v_pixel);
+		// Optimized: uses approximations
+		_pixel = hls::abs(h_pixel) + hls::abs(v_pixel);
 
 		if (_pixel > 255)
 		{
