@@ -155,7 +155,7 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 		x++;
 }
 
-void Sobel(pixel_stream &src, pixel_stream &dst)
+void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 {
 // #pragma HLS INTERFACE ap_ctrl_none port = return
 // #pragma HLS INTERFACE axis port = &src
@@ -187,6 +187,8 @@ void Sobel(pixel_stream &src, pixel_stream &dst)
 
 	// Pixel data to be stored across 'function calls'
 	static pixel_data p_out;
+
+	grad_dir = 0;
 
 	uint8_t pixel = rgba2r(p_in.data);
 	//		// Store pixel value in buffer
@@ -236,7 +238,34 @@ void Sobel(pixel_stream &src, pixel_stream &dst)
 		{
 			_pixel = 255;
 		}
+
+		// Set output pixel data
 		p_out.data = r2rgba(_pixel) | g2rgba(_pixel) | b2rgba(_pixel);
+
+		// Compute the gradient direction
+		float dir_rad = hls::atan2(v_pixel, h_pixel);
+
+		// Direction: 0: (0° || 180°), 1: (45° || -45°), 2: (90° || -90°), 3: (135 || -135°)
+
+		if (dir_rad > -2.4142 && dir_rad <= -0.4142)
+			// for angles between 112.5 and 157.5 (tan(112.5) = -2.4142, tan(157.5) = -0.4142)
+			grad_dir = 3;
+		else if (dir_rad > -0.4142 && dir_rad <= 0.4142)
+			// Four possible directions: 0, 45, 90, 135 for anglse between 0 and 360
+			// for angles between -22.5 and 22.5 (tan(-22.5) = -0.4142, tan(22.5) = 0.4142) and between 157.5 and 180 (tan(157.5) = 2.4142, tan(180) = 0)
+			grad_dir = 0;
+		else if (dir_rad > 0.4142 && dir_rad <= 2.4142)
+			// for angles between 22.5 and 67.5 (tan(22.5) = 0.4142, tan(67.5) = 2.4142)
+			// dir = 45
+			grad_dir = 1;
+		else
+			// for angles between 67.5 and 112.5 (tan(67.5) = 2.4142, tan(112.5) = -2.4142)
+			// dir = 90
+			grad_dir = 2;
+
+		// Print the direction
+		// if (dir > 0)
+		// 	printf("%f\n", dir);
 	}
 	// Store the pixel value in the
 
@@ -260,6 +289,7 @@ void Sobel(pixel_stream &src, pixel_stream &dst)
 
 // Stream function
 pixel_stream gray, sobel, gauss;
+ap_uint<2> grad_dir = 0;
 void stream(pixel_stream &src, pixel_stream &dst, int frame)
 {
 #pragma HLS STREAM variable = gray depth = 1 dim = 1
@@ -271,5 +301,5 @@ void stream(pixel_stream &src, pixel_stream &dst, int frame)
 	// 1. Gaussian blur
 	gaussian(gray, gauss);
 
-	Sobel(gauss, dst);
+	Sobel(gauss, dst, grad_dir);
 }
