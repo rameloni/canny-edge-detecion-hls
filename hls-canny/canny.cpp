@@ -121,7 +121,7 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 			for (int j = 0; j < GAUSSIAN_MASK_SIZE; j++)
 #pragma HLS unroll
 				window[i][j] = buffer[(y - (GAUSSIAN_MASK_SIZE - 1 - i)) % GAUSSIAN_MASK_SIZE][x - (GAUSSIAN_MASK_SIZE - 1 - j)] * GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE - 1 - i][GAUSSIAN_MASK_SIZE - 1 - j];
-		// window[i][j] = buffer[(y - i)) % GAUSSIAN_MASK_SIZE][x - i] * GAUSSIAN_MASK[i][j];
+		// window[i][j] = buffer[(y + i) % GAUSSIAN_MASK_SIZE][x + j] * GAUSSIAN_MASK[i][j];
 
 		// Sum all the values in the window
 		for (int i = 0; i < GAUSSIAN_MASK_SIZE; i++)
@@ -222,6 +222,9 @@ void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 #pragma HLS unroll
 				h_window[i][j] = buffer[(y - (SOBEL_KERNEL_SIZE - 1 - i)) % SOBEL_KERNEL_SIZE][x - (SOBEL_KERNEL_SIZE - 1 - j)] * H_SOBEL_KERNEL[SOBEL_KERNEL_SIZE - 1 - i][SOBEL_KERNEL_SIZE - 1 - j];
 				v_window[i][j] = buffer[(y - (SOBEL_KERNEL_SIZE - 1 - i)) % SOBEL_KERNEL_SIZE][x - (SOBEL_KERNEL_SIZE - 1 - j)] * V_SOBEL_KERNEL[SOBEL_KERNEL_SIZE - 1 - i][SOBEL_KERNEL_SIZE - 1 - j];
+
+				// h_window[i][j] = buffer[(y + i) % SOBEL_KERNEL_SIZE][x + j] * H_SOBEL_KERNEL[i][j];
+				// v_window[i][j] = buffer[(y + i) % SOBEL_KERNEL_SIZE][x + j] * V_SOBEL_KERNEL[i][j];
 			}
 		}
 
@@ -259,7 +262,7 @@ void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 		        {
 		        int32_t dir_angle = (v_pixel << 8) / h_pixel;
 
-		        // Direction: 0: (0° || 180°), 1: (45° || -45°), 2: (90° || -90°), 3: (135 || -135°)
+		        // Direction: 0: (0ï¿½ || 180ï¿½), 1: (45ï¿½ || -45ï¿½), 2: (90ï¿½ || -90ï¿½), 3: (135 || -135ï¿½)
 
 		        if (dir_angle > -618 && dir_angle <= -106)
 		            // for angles between 112.5 and 157.5 (tan(112.5) = -2.4142, tan(157.5) = -0.4142)
@@ -286,6 +289,86 @@ void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 
 	// Need to change this
 	p_out = p_in;
+	////////////////////////////////
+
+	// Increment X and Y counters
+	if (p_in.last)
+	{
+		// Stored a row of pixels
+		x = 0;
+		y++;
+	}
+	else
+		x++;
+}
+
+void double_threshold(pixel_stream &src, pixel_stream &dst)
+{
+// #pragma HLS INTERFACE ap_ctrl_none port = return
+// #pragma HLS INTERFACE axis port = &src
+// #pragma HLS INTERFACE axis port = &dst
+//  #pragma HLS INTERFACE s_axilite port = mask
+#pragma HLS PIPELINE II = 1
+	//
+	// Data to be stored across 'function calls'
+	static uint16_t x = 0; // X coordinate --> cols
+	static uint16_t y = 0; // Y coordinate
+						   //
+	// Buffer to store the pixel values (to be used in the convolution)
+	// static uint32_t buffer[SOBEL_KERNEL_SIZE][WIDTH]; // Gaussian mask
+
+	// Window is used to perform the convolution in parallel
+	// uint32_t h_window[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE]; // Window
+	// uint32_t v_window[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE];
+	//
+	pixel_data p_in;
+	//
+	//		// Load input data from source
+	src >> p_in;
+	//
+	//		// Reset X and Y counters on user signal
+	if (p_in.user)
+		x = y = 0;
+
+	////////////////////////////////
+
+	// Pixel data to be stored across 'function calls'
+	static pixel_data p_out;
+
+	// grad_dir = 0;
+
+	uint8_t pixel = rgba2r(p_in.data);
+	//		// Store pixel value in buffer
+	// if (x < WIDTH)
+	// Store the pixel value in the buffer
+	// buffer[y % SOBEL_KERNEL_SIZE][x] = pixel;
+
+	// Check for threshold
+	if (pixel >= HIGH_THRESHOLD)
+	{
+		// Set output pixel data
+		p_out.data = r2rgba(STRONG_EDGE) | g2rgba(STRONG_EDGE) | b2rgba(STRONG_EDGE);
+	}
+	else if (pixel > LOW_THRESHOLD)
+	{
+		// Set output pixel data
+		p_out.data = r2rgba(WEAK_EDGE) | g2rgba(WEAK_EDGE) | b2rgba(WEAK_EDGE);
+	}
+	else
+	{
+		// Set output pixel data
+		p_out.data = r2rgba(NO_EDGE) | g2rgba(NO_EDGE) | b2rgba(NO_EDGE);
+	}
+
+	// Store the pixel value in the
+
+	// Write pixel to destination
+	dst << p_out;
+
+	// Need to change this
+	p_out = p_in;
+	// p_out.user = p_in.user;
+	// p_out.last = p_in.last;
 	////////////////////////////////
 
 	// Increment X and Y counters
@@ -403,13 +486,14 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir){
 }
 
 // Stream function
-pixel_stream gray, sobel, gauss;
+pixel_stream gray, sobel, gauss, n_max;
 ap_uint<2> grad_dir = 0;
 void stream(pixel_stream &src, pixel_stream &dst, int frame)
 {
 #pragma HLS STREAM variable = gray depth = 1 dim = 1
 #pragma HLS STREAM variable = gauss depth = 1 dim = 1
 #pragma HLS STREAM variable = sobel depth = 1 dim = 1
+#pragma HLS STREAM variable = n_max depth = 1 dim = 1
 	// 0. rgb2gray
 
 	rgb2gray(src, gray);
@@ -417,7 +501,15 @@ void stream(pixel_stream &src, pixel_stream &dst, int frame)
 	// 1. Gaussian blur
 	gaussian(gray, gauss);
 
+	// 2. Sobel
 	Sobel(gauss, sobel, grad_dir);
+
+	// 3. Non-maximum suppression
+	non_max_sup(sobel, n_max, grad_dir);
+
+	// non_max_suppression(sobel, dst, grad_dir);
+
+	// 4. Double threshold
+	double_threshold(n_max, dst);
 //
-	non_max_sup(sobel, dst, grad_dir);
 }

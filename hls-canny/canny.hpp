@@ -48,13 +48,21 @@ const uint32_t GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE] = {{11, 53,
                                                                         {11, 53, 88, 53, 11}};
 #endif
 
-const int H_SOBEL_KERNEL[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE] = {{ -1,  0, 1},
-        														  { -2,  0, 2},
-																  { -1,  0, 1}};
+const int H_SOBEL_KERNEL[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE] = {{-1, 0, 1},
+                                                                  {-2, 0, 2},
+                                                                  {-1, 0, 1}};
 
-const int V_SOBEL_KERNEL[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE] = {{ 1,  2,  1},
-        													      { 0,  0,  0},
-																  {-1, -2, -1}};
+const int V_SOBEL_KERNEL[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE] = {{1, 2, 1},
+                                                                  {0, 0, 0},
+                                                                  {-1, -2, -1}};
+
+// Thresholds for double thresholding
+#define LOW_THRESHOLD 50
+#define HIGH_THRESHOLD 100
+#define STRONG_EDGE 255
+#define WEAK_EDGE 127
+#define NO_EDGE 0
+
 void canny(pixel_stream &src, pixel_stream &dst);
 
 // Perform a conversion from RGB to grayscale
@@ -65,11 +73,6 @@ void gaussian(pixel_stream &src, pixel_stream &dst);
 
 void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir);
 
-void non_max_sup(pixel_stream &src, ap_uint<2> &grad_dir, pixel_stream &dst);
+void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir);
 
-
-
-
-
-
-
+void double_threshold(pixel_stream &src, pixel_stream &dst);
