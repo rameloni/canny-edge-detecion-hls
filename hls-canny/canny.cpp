@@ -214,9 +214,9 @@ void Sobel(pixel_stream &src, pixel_stream &dst){
 			}
 
 			// Sum all the values in the window
-			for (int i = 0; i < GAUSSIAN_MASK_SIZE; i++){
+			for (int i = 0; i < SOBEL_KERNEL_SIZE; i++){
 			#pragma HLS unroll
-				for (int j = 0; j < GAUSSIAN_MASK_SIZE; j++){
+				for (int j = 0; j < SOBEL_KERNEL_SIZE; j++){
 			#pragma HLS unroll
 					h_pixel += h_window[i][j];
 					v_pixel += v_window[i][j];
@@ -224,14 +224,12 @@ void Sobel(pixel_stream &src, pixel_stream &dst){
 			}
 
 			_pixel = hls::sqrt(float(h_pixel*h_pixel+v_pixel*v_pixel));
-			printf("%d\n",_pixel);
-			_pixel = _pixel >> 8;
+
 			if(_pixel > 255){
 				_pixel = 255;
 			}
 			p_out.data = r2rgba(_pixel) | g2rgba(_pixel) | b2rgba(_pixel);
 
-//			p_out.data = 0;
 		}
 		// Store the pixel value in the
 
