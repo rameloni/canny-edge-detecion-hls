@@ -31,7 +31,7 @@ void rgb2gray(pixel_stream &src, pixel_stream &dst)
 	uint8_t r = rgba2r(p_in.data);
 	uint8_t g = rgba2g(p_in.data);
 	uint8_t b = rgba2b(p_in.data);
-	// Fiirst approach
+	// First approach
 //	 uint8_t gray = (r + g + b) / 3;
 
 	// Second approach
@@ -42,7 +42,11 @@ void rgb2gray(pixel_stream &src, pixel_stream &dst)
 
 	//Fourth approach
 //	 uint16_t tmp = r+g+b;
-	 uint8_t gray = r;
+//	 uint8_t gray = (tmp - (tmp >> 2))>> 2;
+
+	//Fifth approach
+	uint8_t gray = (r + (g<<1) + b) >> 2;
+
 	// Set output pixel data
 	p_out.data = r2rgba(gray) | g2rgba(gray) | b2rgba(gray);
 
@@ -247,47 +251,33 @@ void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 		p_out.data = r2rgba(_pixel) | g2rgba(_pixel) | b2rgba(_pixel);
 
 		// Compute the gradient direction
-		float dir_rad = hls::atan2(v_pixel, h_pixel);
-//		int dir_angle = (v_pixel << 8) / h_pixel;
-//		int dir_rad = hls::atan2(v_pixel, h_pixel);
+//		float dir_rad = hls::atan2(v_pixel, h_pixel);
+		// Tangent approximation
+		        if (h_pixel == 0)
+		            grad_dir = 2;
+		        else
+		        {
+		        int32_t dir_angle = (v_pixel << 8) / h_pixel;
 
-		// Direction: 0: (0Â° || 180Â°), 1: (45Â° || -45Â°), 2: (90Â° || -90Â°), 3: (135 || -135Â°)
+		        // Direction: 0: (0° || 180°), 1: (45° || -45°), 2: (90° || -90°), 3: (135 || -135°)
 
-		if (dir_rad > -2.4142 && dir_rad <= -0.4142)
-			// for angles between 112.5 and 157.5 (tan(112.5) = -2.4142, tan(157.5) = -0.4142)
-			grad_dir = 3;
-		else if (dir_rad > -0.4142 && dir_rad <= 0.4142)
-			// Four possible directions: 0, 45, 90, 135 for anglse between 0 and 360
-			// for angles between -22.5 and 22.5 (tan(-22.5) = -0.4142, tan(22.5) = 0.4142) and between 157.5 and 180 (tan(157.5) = 2.4142, tan(180) = 0)
-			grad_dir = 0;
-		else if (dir_rad > 0.4142 && dir_rad <= 2.4142)
-			// for angles between 22.5 and 67.5 (tan(22.5) = 0.4142, tan(67.5) = 2.4142)
-			// dir = 45
-			grad_dir = 1;
-		else
-			// for angles between 67.5 and 112.5 (tan(67.5) = 2.4142, tan(112.5) = -2.4142)
-			// dir = 90
-			grad_dir = 2;
+		        if (dir_angle > -618 && dir_angle <= -106)
+		            // for angles between 112.5 and 157.5 (tan(112.5) = -2.4142, tan(157.5) = -0.4142)
+		            grad_dir = 3;
+		        else if (dir_angle > -106 && dir_angle <= 106)
+		            // Four possible directions: 0, 45, 90, 135 for anglse between 0 and 360
+		            // for angles between -22.5 and 22.5 (tan(-22.5) = -0.4142, tan(22.5) = 0.4142) and between 157.5 and 180 (tan(157.5) = 2.4142, tan(180) = 0)
+		            grad_dir = 0;
+		        else if (dir_angle > 106 && dir_angle <= 618)
+		            // for angles between 22.5 and 67.5 (tan(22.5) = 0.4142, tan(67.5) = 2.4142)
+		            // dir = 45
+		            grad_dir = 1;
+		        else
+		            // for angles between 67.5 and 112.5 (tan(67.5) = 2.4142, tan(112.5) = -2.4142)
+		            // dir = 90
+		            grad_dir = 2;
+		        }
 
-//		if (dir_angle > -618 && dir_angle <= 106)
-//			// for angles between 112.5 and 157.5 (tan(112.5) = -2.4142, tan(157.5) = -0.4142)
-//			grad_dir = 3;
-//		else if (dir_angle > -106 && dir_angle <= 106)
-//			// Four possible directions: 0, 45, 90, 135 for anglse between 0 and 360
-//			// for angles between -22.5 and 22.5 (tan(-22.5) = -0.4142, tan(22.5) = 0.4142) and between 157.5 and 180 (tan(157.5) = 2.4142, tan(180) = 0)
-//			grad_dir = 0;
-//		else if (dir_angle > 106 && dir_angle <= 618)
-//			// for angles between 22.5 and 67.5 (tan(22.5) = 0.4142, tan(67.5) = 2.4142)
-//			// dir = 45
-//			grad_dir = 1;
-//		else
-//			// for angles between 67.5 and 112.5 (tan(67.5) = 2.4142, tan(112.5) = -2.4142)
-//			// dir = 90
-//			grad_dir = 2;
-
-		// Print the direction
-		// if (dir > 0)
-		// 	printf("%f\n", dir);
 	}
 	// Store the pixel value in the
 
