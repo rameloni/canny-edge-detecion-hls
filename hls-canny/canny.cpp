@@ -1,5 +1,6 @@
 #include "canny.hpp"
 #include <hls_math.h>
+#include <hls_dsp.h>
 void rgb2gray(pixel_stream &src, pixel_stream &dst)
 {
 // #pragma HLS INTERFACE ap_ctrl_none port = return
@@ -31,14 +32,17 @@ void rgb2gray(pixel_stream &src, pixel_stream &dst)
 	uint8_t g = rgba2g(p_in.data);
 	uint8_t b = rgba2b(p_in.data);
 	// Fiirst approach
-	// uint8_t gray = (r + g + b) / 3;
+//	 uint8_t gray = (r + g + b) / 3;
 
 	// Second approach
-	uint8_t gray = (r * 0.3 + g * 0.59 + b * 0.11);
+//	uint8_t gray = (r * 0.3 + g * 0.59 + b * 0.11);
 
 	// Third approach
 	// uint8_t gray = (r / 3 + g / 3 + b / 3);
 
+	//Fourth approach
+//	 uint16_t tmp = r+g+b;
+	 uint8_t gray = r;
 	// Set output pixel data
 	p_out.data = r2rgba(gray) | g2rgba(gray) | b2rgba(gray);
 
@@ -244,6 +248,8 @@ void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 
 		// Compute the gradient direction
 		float dir_rad = hls::atan2(v_pixel, h_pixel);
+//		int dir_angle = (v_pixel << 8) / h_pixel;
+//		int dir_rad = hls::atan2(v_pixel, h_pixel);
 
 		// Direction: 0: (0° || 180°), 1: (45° || -45°), 2: (90° || -90°), 3: (135 || -135°)
 
@@ -262,6 +268,22 @@ void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 			// for angles between 67.5 and 112.5 (tan(67.5) = 2.4142, tan(112.5) = -2.4142)
 			// dir = 90
 			grad_dir = 2;
+
+//		if (dir_angle > -618 && dir_angle <= 106)
+//			// for angles between 112.5 and 157.5 (tan(112.5) = -2.4142, tan(157.5) = -0.4142)
+//			grad_dir = 3;
+//		else if (dir_angle > -106 && dir_angle <= 106)
+//			// Four possible directions: 0, 45, 90, 135 for anglse between 0 and 360
+//			// for angles between -22.5 and 22.5 (tan(-22.5) = -0.4142, tan(22.5) = 0.4142) and between 157.5 and 180 (tan(157.5) = 2.4142, tan(180) = 0)
+//			grad_dir = 0;
+//		else if (dir_angle > 106 && dir_angle <= 618)
+//			// for angles between 22.5 and 67.5 (tan(22.5) = 0.4142, tan(67.5) = 2.4142)
+//			// dir = 45
+//			grad_dir = 1;
+//		else
+//			// for angles between 67.5 and 112.5 (tan(67.5) = 2.4142, tan(112.5) = -2.4142)
+//			// dir = 90
+//			grad_dir = 2;
 
 		// Print the direction
 		// if (dir > 0)
@@ -287,6 +309,109 @@ void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 		x++;
 }
 
+void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir){
+#pragma HLS PIPELINE II = 1
+	//
+	// Data to be stored across 'function calls'
+	static uint16_t x = 0; // X coordinate --> cols
+	static uint16_t y = 0; // Y coordinate
+
+
+	pixel_data p_in;
+
+	// Load input data from source
+	src >> p_in;
+	static pixel_data p_out;
+
+	// Buffer to store the pixel values (to be used in the convolution)
+	static uint32_t buffer[SOBEL_KERNEL_SIZE][WIDTH][2];
+	uint32_t window[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE][2];
+
+	if (p_in.user){
+		x = y = 0;
+	}
+	uint8_t pixel = rgba2r(p_in.data);
+	for(int i = 0; i < SOBEL_KERNEL_SIZE-1; i++){
+//		Using a FIFO to store the line data
+		buffer[i][x][0] = buffer[i+1][x][0];
+		buffer[i][x][1] = buffer[i+1][x][1];
+	}
+	if (x < WIDTH){
+//	write the new pixel to the line buffer
+		buffer[SOBEL_KERNEL_SIZE-1][x][0] = pixel;
+		buffer[SOBEL_KERNEL_SIZE-1][x][1] = grad_dir;
+	}
+
+	uint32_t _pixel = 0;
+
+	if (y >= SOBEL_KERNEL_SIZE - 1){
+		//	Using a FIFO to be the window buffer
+
+		for(int i = 0; i< SOBEL_KERNEL_SIZE; i++){
+			for (int j = 0; j < SOBEL_KERNEL_SIZE-1; j++){
+			window[i][j][0] = window[i][j+1][0];
+			window[i][j][1] = window[i][j+1][1];
+			}
+		}
+
+
+	//	writing the new pixel to the window buffer from line buffer
+		for(int i = 0; i < SOBEL_KERNEL_SIZE; i++){
+			window[i][SOBEL_KERNEL_SIZE-1][0] = buffer[i][x][0];
+			window[i][SOBEL_KERNEL_SIZE-1][1] = buffer[i][x][1];
+		}
+
+// starting non maximum supression
+		uint32_t grad_current, value_current;
+		grad_current = window[1][1][1];
+		value_current = window[1][1][0];
+
+		if (grad_current == 0){
+			if (value_current < window[1][0][0] || value_current < window[1][2][0]){
+				value_current = 0;
+			}
+		}
+		else if(grad_current == 1){
+			if (value_current < window[0][0][0] || value_current < window[2][2][0]){
+				value_current = 0;
+			}
+		}
+		else if(grad_current == 2){
+			if (value_current < window[0][1][0] || value_current < window[2][1][0]){
+				value_current = 0;
+			}
+		}
+		else if(grad_current == 3){
+			if (value_current < window[2][0][0] || value_current < window[0][2][0]){
+				value_current = 0;
+			}
+		}
+
+		_pixel = value_current;
+	}
+
+	// outputing
+
+	_pixel = p_out.data;
+
+	dst << p_out;
+
+	// Need to change this
+	p_out = p_in;
+	////////////////////////////////
+
+	// Increment X and Y counters
+	if (p_in.last)
+	{
+		// Stored a row of pixels
+		x = 0;
+		y++;
+	}
+	else
+		x++;
+
+}
+
 // Stream function
 pixel_stream gray, sobel, gauss;
 ap_uint<2> grad_dir = 0;
@@ -294,6 +419,7 @@ void stream(pixel_stream &src, pixel_stream &dst, int frame)
 {
 #pragma HLS STREAM variable = gray depth = 1 dim = 1
 #pragma HLS STREAM variable = gauss depth = 1 dim = 1
+#pragma HLS STREAM variable = sobel depth = 1 dim = 1
 	// 0. rgb2gray
 
 	rgb2gray(src, gray);
@@ -301,5 +427,7 @@ void stream(pixel_stream &src, pixel_stream &dst, int frame)
 	// 1. Gaussian blur
 	gaussian(gray, gauss);
 
-	Sobel(gauss, dst, grad_dir);
+	Sobel(gauss, sobel, grad_dir);
+//
+	non_max_sup(sobel, dst, grad_dir);
 }

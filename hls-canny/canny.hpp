@@ -65,7 +65,7 @@ void gaussian(pixel_stream &src, pixel_stream &dst);
 
 void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir);
 
-void non_max_sup(pixel_stream &src, pixel_stream &dst);
+void non_max_sup(pixel_stream &src, ap_uint<2> &grad_dir, pixel_stream &dst);
 
 
 
