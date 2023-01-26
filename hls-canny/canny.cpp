@@ -354,8 +354,9 @@ void double_threshold(pixel_stream &src, pixel_stream &dst)
 	dst << p_out;
 
 	// Need to change this
-	p_out.user = p_in.user;
-	p_out.last = p_in.last;
+	p_out = p_in;
+	// p_out.user = p_in.user;
+	// p_out.last = p_in.last;
 	////////////////////////////////
 
 	// Increment X and Y counters
@@ -376,6 +377,7 @@ void stream(pixel_stream &src, pixel_stream &dst, int frame)
 {
 #pragma HLS STREAM variable = gray depth = 1 dim = 1
 #pragma HLS STREAM variable = gauss depth = 1 dim = 1
+#pragma HLS STREAM variable = sobel depth = 1 dim = 1
 	// 0. rgb2gray
 
 	rgb2gray(src, gray);
