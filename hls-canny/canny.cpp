@@ -87,6 +87,8 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 	// Window is used to perform the convolution in parallel
 	uint32_t window[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE]; // Window
 
+#pragma HLS ARRAY_RESHAPE variable=buffer block factor=4
+#pragma HLS ARRAY_PARTITION variable=window block factor=4
 	pixel_data p_in;
 
 	// Load input data from source
@@ -120,6 +122,9 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 #pragma HLS unroll
 			for (int j = 0; j < GAUSSIAN_MASK_SIZE; j++)
 #pragma HLS unroll
+#pragma HLS dependence variable=window inter false
+#pragma HLS dependence variable=buffer inter false
+
 				window[i][j] = buffer[(y - (GAUSSIAN_MASK_SIZE - 1 - i)) % GAUSSIAN_MASK_SIZE][x - (GAUSSIAN_MASK_SIZE - 1 - j)] * GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE - 1 - i][GAUSSIAN_MASK_SIZE - 1 - j];
 		// window[i][j] = buffer[(y + i) % GAUSSIAN_MASK_SIZE][x + j] * GAUSSIAN_MASK[i][j];
 
@@ -128,6 +133,7 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 #pragma HLS unroll
 			for (int j = 0; j < GAUSSIAN_MASK_SIZE; j++)
 #pragma HLS unroll
+#pragma HLS dependence variable=window inter false
 				_pixel += window[i][j];
 
 		// Sequential implementation
@@ -542,14 +548,26 @@ void edge_tracking(pixel_stream &src, pixel_stream &dst)
 	if (y >= 2)
 	{
 		if (buffer[(y - 1) % 3][x - 1] == WEAK_EDGE){
-			if (buffer[(y - 2) % 3][x - 2] == STRONG_EDGE ||
+			bool strong_pixel_close = false;
+			for (int i = 0; i < 3; i++){
+#pragma HLS unroll
+				for (int j = 0; j < 3; j++){
+#pragma HLS unroll
+#pragma HLS dependence variable=buffer inter false
+					if (i != 1 && j != 1){
+						strong_pixel_close |= (buffer[(y - j) % 3][x - i] == STRONG_EDGE);
+					}
+				}
+			}
+			if (/*buffer[(y - 2) % 3][x - 2] == STRONG_EDGE ||
 				buffer[(y - 2) % 3][x - 1] == STRONG_EDGE ||
 				buffer[(y - 2) % 3][x] == STRONG_EDGE ||
 				buffer[(y - 1) % 3][x - 2] == STRONG_EDGE ||
 				buffer[(y - 1) % 3][x] == STRONG_EDGE ||
 				buffer[(y) % 3][x - 2] == STRONG_EDGE ||
 				buffer[(y) % 3][x - 1] == STRONG_EDGE ||
-				buffer[(y) % 3][x] == STRONG_EDGE
+				buffer[(y) % 3][x] == STRONG_EDGE*/
+					strong_pixel_close
 				) {
 					p_out.data = strong_edge;
 				} else {
@@ -592,31 +610,42 @@ void edge_tracking(pixel_stream &src, pixel_stream &dst)
 pixel_stream gray, sobel, gauss, n_max, db_thresh;
 ap_uint<2> grad_dir = 0;
 void stream(pixel_stream &src, pixel_stream &dst, int frame)
+//void stream(pixel_stream &src, pixel_stream &dst)
 {
+#pragma HLS INTERFACE ap_ctrl_none port=return
+#pragma HLS INTERFACE axis port=&src
+#pragma HLS INTERFACE axis port=&dst
+
 #pragma HLS STREAM variable = gray depth = 1 dim = 1
 #pragma HLS STREAM variable = gauss depth = 1 dim = 1
 #pragma HLS STREAM variable = sobel depth = 1 dim = 1
 #pragma HLS STREAM variable = n_max depth = 1 dim = 1
 #pragma HLS STREAM variable = db_thresh depth = 1 dim = 1
+
+	//-1. transmit
+	pixel_data p_in;
+	src >> p_in;
+	dst << p_in;
+
 	// 0. rgb2gray
 
-	rgb2gray(src, gray);
+//	rgb2gray(src, dst);
 
-	// 1. Gaussian blur
-	gaussian(gray, gauss);
-
-	// 2. Sobel
-	Sobel(gauss, sobel, grad_dir);
-
-	// 3. Non-maximum suppression
-	non_max_sup(sobel, n_max, grad_dir);
-
-	// non_max_suppression(sobel, dst, grad_dir);
-
-	// 4. Double threshold
-	double_threshold(n_max, db_thresh);
-
-	// 5. Edge tracking
-	edge_tracking(db_thresh, dst);
+//	// 1. Gaussian blur
+//	gaussian(gray, gauss);
+//
+//	// 2. Sobel
+//	Sobel(gauss, sobel, grad_dir);
+//
+//	// 3. Non-maximum suppression
+//	non_max_sup(sobel, n_max, grad_dir);
+//
+//	// non_max_suppression(sobel, dst, grad_dir);
+//
+//	// 4. Double threshold
+//	double_threshold(n_max, db_thresh);
+//
+//	// 5. Edge tracking
+//	edge_tracking(db_thresh, dst);
 
 }
