@@ -612,8 +612,8 @@ void edge_tracking(pixel_stream &src, pixel_stream &dst)
 // Stream function
 pixel_stream gray, sobel, gauss, n_max, db_thresh;
 ap_uint<2> grad_dir = 0;
-void stream(pixel_stream &src, pixel_stream &dst, int frame)
-//void stream(pixel_stream &src, pixel_stream &dst)
+//void stream(pixel_stream &src, pixel_stream &dst, int frame)
+void stream(pixel_stream &src, pixel_stream &dst)
 {
 #pragma HLS INTERFACE ap_ctrl_none port=return
 #pragma HLS INTERFACE axis port=&src
@@ -625,6 +625,68 @@ void stream(pixel_stream &src, pixel_stream &dst, int frame)
 #pragma HLS STREAM variable = n_max depth = 1 dim = 1
 #pragma HLS STREAM variable = db_thresh depth = 1 dim = 1
 
+
+
+#pragma HLS PIPELINE II = 1
+
+	// Data to be stored across 'function calls'
+	static uint16_t x = 0;
+	static uint16_t y = 0;
+
+	pixel_data p_in;
+
+	// Load input data from source
+	src >> p_in;
+
+	// Reset X and Y counters on user signal
+	if (p_in.user)
+		x = y = 0;
+
+	////////////////////////////////
+
+	// Pixel data to be stored across 'function calls'
+	static pixel_data p_out;
+
+	// Convert RGB to grayscale
+	uint8_t r = rgba2r(p_in.data);
+	uint8_t g = rgba2g(p_in.data);
+	uint8_t b = rgba2b(p_in.data);
+	// First approach
+//	 uint8_t gray = (r + g + b) / 3;
+
+	// Second approach
+//	uint8_t gray = (r * 0.3 + g * 0.59 + b * 0.11);
+
+	// Third approach
+	// uint8_t gray = (r / 3 + g / 3 + b / 3);
+
+	//Fourth approach
+//	 uint16_t tmp = r+g+b;
+//	 uint8_t gray = (tmp - (tmp >> 2))>> 2;
+
+	//Fifth approach
+	uint8_t gray = (r + (g<<1) + b) >> 2;
+
+	// Set output pixel data
+	p_out.data = r2rgba(gray) | g2rgba(gray) | b2rgba(gray);
+
+	////////////////////////////////
+
+	// Write pixel to destination
+	dst << p_out;
+
+	// Copy previous pixel data to next output pixel
+	p_out = p_in;
+
+	// Increment X and Y counters
+	if (p_in.last)
+	{
+		x = 0;
+		y++;
+	}
+	else
+		x++;
+
 	//-1. transmit
 //	pixel_data p_in;
 //	src >> p_in;
@@ -632,23 +694,23 @@ void stream(pixel_stream &src, pixel_stream &dst, int frame)
 
 	// 0. rgb2gray
 
-	rgb2gray(src, gray);
+//	rgb2gray(src, gray);
 
-	// 1. Gaussian blur
-	gaussian(gray, gauss);
-
-	// 2. Sobel
-	Sobel(gauss, sobel, grad_dir);
-
-	// 3. Non-maximum suppression
-	non_max_sup(sobel, n_max, grad_dir);
-
-	// non_max_suppression(sobel, dst, grad_dir);
-
-	// 4. Double threshold
-	double_threshold(n_max, db_thresh);
-
-	// 5. Edge tracking
-	edge_tracking(db_thresh, dst);
+//	// 1. Gaussian blur
+//	gaussian(gray, gauss);
+//
+//	// 2. Sobel
+//	Sobel(gauss, sobel, grad_dir);
+//
+//	// 3. Non-maximum suppression
+//	non_max_sup(sobel, n_max, grad_dir);
+//
+//	// non_max_suppression(sobel, dst, grad_dir);
+//
+//	// 4. Double threshold
+//	double_threshold(n_max, db_thresh);
+//
+//	// 5. Edge tracking
+//	edge_tracking(db_thresh, dst);
 
 }
