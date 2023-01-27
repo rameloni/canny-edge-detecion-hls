@@ -395,115 +395,118 @@ void double_threshold(pixel_stream &src, pixel_stream &dst)
 		x++;
 }
 
-void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir){
+void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
+{
 #pragma HLS PIPELINE II = 1
 	//
 	// Data to be stored across 'function calls'
 	static uint16_t x = 0; // X coordinate --> cols
 	static uint16_t y = 0; // Y coordinate
 
-
 	pixel_data p_in;
 
 	// Load input data from source
 	src >> p_in;
+
 	static pixel_data p_out;
 
 	// Buffer to store the pixel values (to be used in the convolution)
-	static uint32_t buffer[SOBEL_KERNEL_SIZE][WIDTH][2];
-	uint32_t window[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE][2];
+	static uint32_t buffer[3][WIDTH];
+	static ap_uint<2> buffer_grad[3][WIDTH];
+	uint32_t window[3][3];
+	ap_uint<2> window_grad[3][3];
 
-	if (p_in.user){
+	if (p_in.user)
+	{
 		x = y = 0;
 	}
+
 	uint8_t pixel = rgba2r(p_in.data);
-	for(int i = 0; i < SOBEL_KERNEL_SIZE-1; i++){
-//		Using a FIFO to store the line data
-		buffer[i][x][0] = buffer[i+1][x][0];
-		buffer[i][x][1] = buffer[i+1][x][1];
-	}
-	if (x < WIDTH){
-//	write the new pixel to the line buffer
-		buffer[SOBEL_KERNEL_SIZE-1][x][0] = pixel;
-		buffer[SOBEL_KERNEL_SIZE-1][x][1] = grad_dir;
+
+	if (x < WIDTH)
+	{
+		//	write the new pixel to the line buffer
+		buffer[y % 3][x] = pixel;
+		buffer_grad[y % 3][x] = (uint8_t)grad_dir;
 	}
 
-	uint32_t _pixel = 0;
 
-	if (y >= SOBEL_KERNEL_SIZE - 1){
-		//	Using a FIFO to be the window buffer
+	if (y >= SOBEL_KERNEL_SIZE - 1)
+	{
 
-		for(int i = 0; i< SOBEL_KERNEL_SIZE; i++){
-			for (int j = 0; j < SOBEL_KERNEL_SIZE-1; j++){
-			window[i][j][0] = window[i][j+1][0];
-			window[i][j][1] = window[i][j+1][1];
+		for (int i = 0; i < 3; i++)
+		{
+#pragma HLS unroll
+			for (int j = 0; j < 3; j++)
+			{
+#pragma HLS unroll
+				window[i][j] = buffer[(y - (2 - i)) % 3][x - (2 - j)];
+				window_grad[i][j] = buffer_grad[(y - (2 - i)) % 3][x - (2 - j)];
 			}
 		}
 
+		uint8_t ref1, ref2, _pixel;
 
-	//	writing the new pixel to the window buffer from line buffer
-		for(int i = 0; i < SOBEL_KERNEL_SIZE; i++){
-			window[i][SOBEL_KERNEL_SIZE-1][0] = buffer[i][x][0];
-			window[i][SOBEL_KERNEL_SIZE-1][1] = buffer[i][x][1];
+		ap_uint<2>_grad_dir = window_grad[1][1];
+		// (0 or 180 degrees)
+		if (_grad_dir == 0)
+		{
+			ref1 = window[1][0]; // [i][j-1] - right center
+			ref2 = window[1][2]; // [i][j-1] - right center
 		}
-
-// starting non maximum supression
-		uint32_t grad_current, value_current;
-		grad_current = window[1][1][1];
-		value_current = window[1][1][0];
-
-		if (grad_current == 0){
-			if (value_current < window[1][0][0] || value_current < window[1][2][0]){
-				value_current = 0;
-			}
+		else if (_grad_dir == 3)
+		{
+			// 135
+			ref1 = window[0][0];
+			ref2 = window[2][2];
 		}
-		else if(grad_current == 1){
-			if (value_current < window[0][0][0] || value_current < window[2][2][0]){
-				value_current = 0;
-			}
+		else if (_grad_dir == 2)
+		{
+			// 90
+			ref1 = window[0][1];
+			ref2 = window[2][1];
 		}
-		else if(grad_current == 2){
-			if (value_current < window[0][1][0] || value_current < window[2][1][0]){
-				value_current = 0;
-			}
-		}
-		else if(grad_current == 3){
-			if (value_current < window[2][0][0] || value_current < window[0][2][0]){
-				value_current = 0;
-			}
+		else
+		{
+			// 45
+			ref1 = window[0][2];
+			ref2 = window[2][0];
 		}
 
-		_pixel = value_current;
+		if (window[1][1] < ref1 || window[1][1] < ref2)
+		{
+			_pixel = 0;
+		}
+		else
+			_pixel = window[1][1];
+		p_out.data = r2rgba(_pixel) | b2rgba(_pixel) | g2rgba(_pixel);
 	}
-	else {
+	else
+	{
 		// Set output pixel data
 		p_out.data = p_in.data;
 	}
 
-
 	// outputing
-
-	_pixel = p_out.data;
-
 	dst << p_out;
 
 	// Need to change this
 	p_out = p_in;
-	////////////////////////////////
+	// dst << p_out;
 
+	////////////////////////////////
+	p_out.last = 0;
 	// Increment X and Y counters
 	if (p_in.last)
 	{
+		p_out.last = 1;
 		// Stored a row of pixels
 		x = 0;
 		y++;
 	}
 	else
 		x++;
-
 }
-
-
 
 void edge_tracking(pixel_stream &src, pixel_stream &dst)
 {
@@ -623,29 +626,29 @@ void stream(pixel_stream &src, pixel_stream &dst, int frame)
 #pragma HLS STREAM variable = db_thresh depth = 1 dim = 1
 
 	//-1. transmit
-	pixel_data p_in;
-	src >> p_in;
-	dst << p_in;
+//	pixel_data p_in;
+//	src >> p_in;
+//	dst << p_in;
 
 	// 0. rgb2gray
 
-//	rgb2gray(src, dst);
+	rgb2gray(src, gray);
 
-//	// 1. Gaussian blur
-//	gaussian(gray, gauss);
-//
-//	// 2. Sobel
-//	Sobel(gauss, sobel, grad_dir);
-//
-//	// 3. Non-maximum suppression
-//	non_max_sup(sobel, n_max, grad_dir);
-//
-//	// non_max_suppression(sobel, dst, grad_dir);
-//
-//	// 4. Double threshold
-//	double_threshold(n_max, db_thresh);
-//
-//	// 5. Edge tracking
-//	edge_tracking(db_thresh, dst);
+	// 1. Gaussian blur
+	gaussian(gray, gauss);
+
+	// 2. Sobel
+	Sobel(gauss, sobel, grad_dir);
+
+	// 3. Non-maximum suppression
+	non_max_sup(sobel, n_max, grad_dir);
+
+	// non_max_suppression(sobel, dst, grad_dir);
+
+	// 4. Double threshold
+	double_threshold(n_max, db_thresh);
+
+	// 5. Edge tracking
+	edge_tracking(db_thresh, dst);
 
 }
