@@ -75,29 +75,31 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 // #pragma HLS INTERFACE axis port = &src
 // #pragma HLS INTERFACE axis port = &dst
 //  #pragma HLS INTERFACE s_axilite port = mask
-#pragma HLS PIPELINE II = 1
+#pragma HLS PIPELINE II=1
 
 	// Data to be stored across 'function calls'
 	static uint16_t x = 0; // X coordinate --> cols
 	static uint16_t y = 0; // Y coordinate
-
+	static uint8_t cnt = 0;
 	// Buffer to store the pixel values (to be used in the convolution)
-	static uint32_t buffer[GAUSSIAN_MASK_SIZE][WIDTH]; // Gaussian mask
+	static uint8_t buffer[GAUSSIAN_MASK_SIZE][WIDTH]; // Gaussian mask
 
 	// Window is used to perform the convolution in parallel
-	uint32_t window[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE]; // Window
+	uint16_t window[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE]; // Window
+#pragma HLS ARRAY_RESHAPE variable=buffer complete dim=1
+#pragma HLS ARRAY_PARTITION variable=window complete dim=0
+//#pragma HLS ARRAY_PARTITION variable=GAUSS_KERNEL complete dim=0
 
-#pragma HLS ARRAY_RESHAPE variable=buffer block factor=4
-#pragma HLS ARRAY_PARTITION variable=window block factor=4
 	pixel_data p_in;
 
 	// Load input data from source
 	src >> p_in;
 
 	// Reset X and Y counters on user signal
-	if (p_in.user)
+	if (p_in.user){
 		x = y = 0;
-
+		cnt = 0;
+	}
 	////////////////////////////////
 
 	// Pixel data to be stored across 'function calls'
@@ -105,10 +107,12 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 
 	uint8_t pixel = rgba2r(p_in.data);
 	// Store pixel value in buffer
-	if (x < WIDTH)
+	if (x < WIDTH){
 		// Store the pixel value in the buffer
-		buffer[y % GAUSSIAN_MASK_SIZE][x] = pixel;
 
+//		buffer[y % GAUSSIAN_MASK_SIZE][x] = pixel;
+		buffer[cnt][x] = pixel;
+	}
 	// Check if we have enough data to perform the convolution
 	if (y >= GAUSSIAN_MASK_SIZE - 1)
 	{
@@ -118,22 +122,46 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 		uint32_t _pixel = 0;
 
 		// Perform the multiplication step
-		for (int i = 0; i < GAUSSIAN_MASK_SIZE; i++)
-#pragma HLS unroll
-			for (int j = 0; j < GAUSSIAN_MASK_SIZE; j++)
-#pragma HLS unroll
-#pragma HLS dependence variable=window inter false
-#pragma HLS dependence variable=buffer inter false
+//		for (uint8_t i = 0; i < GAUSSIAN_MASK_SIZE; i++)
+//#pragma HLS unroll
+//			for (int j = 0; j < GAUSSIAN_MASK_SIZE; j++)
+//#pragma HLS unroll
+////#pragma HLS unroll
+////#pragma HLS dependence variable=window inter false
+////#pragma HLS dependence variable=buffer inter false
+////				window[i][j] = buffer[i][x - (GAUSSIAN_MASK_SIZE - 1 - j)] * GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE - 1 - i][GAUSSIAN_MASK_SIZE - 1 - j];
+////				window[i][j] = buffer[cnt + 5 - GAUSSIAN_MASK_SIZE][x - (GAUSSIAN_MASK_SIZE - 1 - j)] * GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE - 1 - i][GAUSSIAN_MASK_SIZE - 1 - j];
+////				window[i][j] = buffer[(cnt + 4) % GAUSSIAN_MASK_SIZE][x - (GAUSSIAN_MASK_SIZE - 1 - j)] * GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE - 1 - i][GAUSSIAN_MASK_SIZE - 1 - j];
+////				window[i][j] = buffer[(y - (GAUSSIAN_MASK_SIZE - 1 - i)) % GAUSSIAN_MASK_SIZE][x - (GAUSSIAN_MASK_SIZE - 1 - j)] * GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE - 1- i][GAUSSIAN_MASK_SIZE - 1 - j];
+////				window[i][j] = i+j;
+//		// window[i][j] = buffer[(y + i) % GAUSSIAN_MASK_SIZE][x + j] * GAUSSIAN_MASK[i][j];
+int8_t cnt2 = cnt;
+		// Perform the multiplication step
+		for (int8_t i = GAUSSIAN_MASK_SIZE - 1; i >= 0; i--){
+//#pragma HLS PIPELINE II=1
+//#pragma HLS LOOP_FLATTEN off
+			for (int8_t j = GAUSSIAN_MASK_SIZE - 1; j >= 0; j--){
+#pragma HLS PIPELINE II=1
+				window[i][j] = buffer[cnt2][x + j] * GAUSSIAN_MASK[i][j];
+				if (x+j >= WIDTH){
+					window[i][j] = 0;
+				}
+			}
+			cnt2--;
+			if (cnt2 < 0){
+				cnt2 = GAUSSIAN_MASK_SIZE-1;
+			}
+		}
+//				window[i][j] = buffer[(y - (GAUSSIAN_MASK_SIZE - 1 - i)) % GAUSSIAN_MASK_SIZE][x - (GAUSSIAN_MASK_SIZE - 1 - j)] * GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE - 1- i][GAUSSIAN_MASK_SIZE - 1 - j];
 
-				window[i][j] = buffer[(y - (GAUSSIAN_MASK_SIZE - 1 - i)) % GAUSSIAN_MASK_SIZE][x - (GAUSSIAN_MASK_SIZE - 1 - j)] * GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE - 1 - i][GAUSSIAN_MASK_SIZE - 1 - j];
 		// window[i][j] = buffer[(y + i) % GAUSSIAN_MASK_SIZE][x + j] * GAUSSIAN_MASK[i][j];
 
 		// Sum all the values in the window
 		for (int i = 0; i < GAUSSIAN_MASK_SIZE; i++)
-#pragma HLS unroll
+//#pragma HLS PIPELINE II
 			for (int j = 0; j < GAUSSIAN_MASK_SIZE; j++)
-#pragma HLS unroll
-#pragma HLS dependence variable=window inter false
+#pragma HLS PIPELINE II=1
+//#pragma HLS dependence variable=window inter false
 				_pixel += window[i][j];
 
 		// Sequential implementation
@@ -167,6 +195,10 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 		// Stored a row of pixels
 		x = 0;
 		y++;
+		cnt ++;
+		if (cnt >= GAUSSIAN_MASK_SIZE){
+			cnt = 0;
+		}
 	}
 	else
 		x++;
@@ -186,10 +218,13 @@ void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 						   //
 	// Buffer to store the pixel values (to be used in the convolution)
 	static uint32_t buffer[SOBEL_KERNEL_SIZE][WIDTH]; // Gaussian mask
+#pragma HLS ARRAY_RESHAPE variable=buffer complete dim=1
 
 	// Window is used to perform the convolution in parallel
 	uint32_t h_window[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE]; // Window
 	uint32_t v_window[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE];
+//#pragma HLS ARRAY_PARTITION variable=h_window complete dim=0
+//#pragma HLS ARRAY_PARTITION variable=v_window complete dim=0
 	//
 	pixel_data p_in;
 	//
@@ -610,11 +645,13 @@ void edge_tracking(pixel_stream &src, pixel_stream &dst)
 }
 
 // Stream function
+
+
+void stream(pixel_stream &src, pixel_stream &dst, int frame)
+//void stream(pixel_stream &src, pixel_stream &dst)
+{
 pixel_stream gray, sobel, gauss, n_max, db_thresh;
 ap_uint<2> grad_dir = 0;
-//void stream(pixel_stream &src, pixel_stream &dst, int frame)
-void stream(pixel_stream &src, pixel_stream &dst)
-{
 #pragma HLS INTERFACE ap_ctrl_none port=return
 #pragma HLS INTERFACE axis port=&src
 #pragma HLS INTERFACE axis port=&dst
@@ -625,67 +662,11 @@ void stream(pixel_stream &src, pixel_stream &dst)
 #pragma HLS STREAM variable = n_max depth = 1 dim = 1
 #pragma HLS STREAM variable = db_thresh depth = 1 dim = 1
 
+#pragma HLS DATAFLOW
+
+//#pragma HLS PIPELINE II = 1
 
 
-#pragma HLS PIPELINE II = 1
-
-	// Data to be stored across 'function calls'
-	static uint16_t x = 0;
-	static uint16_t y = 0;
-
-	pixel_data p_in;
-
-	// Load input data from source
-	src >> p_in;
-
-	// Reset X and Y counters on user signal
-	if (p_in.user)
-		x = y = 0;
-
-	////////////////////////////////
-
-	// Pixel data to be stored across 'function calls'
-	static pixel_data p_out;
-
-	// Convert RGB to grayscale
-	uint8_t r = rgba2r(p_in.data);
-	uint8_t g = rgba2g(p_in.data);
-	uint8_t b = rgba2b(p_in.data);
-	// First approach
-//	 uint8_t gray = (r + g + b) / 3;
-
-	// Second approach
-//	uint8_t gray = (r * 0.3 + g * 0.59 + b * 0.11);
-
-	// Third approach
-	// uint8_t gray = (r / 3 + g / 3 + b / 3);
-
-	//Fourth approach
-//	 uint16_t tmp = r+g+b;
-//	 uint8_t gray = (tmp - (tmp >> 2))>> 2;
-
-	//Fifth approach
-	uint8_t gray = (r + (g<<1) + b) >> 2;
-
-	// Set output pixel data
-	p_out.data = r2rgba(gray) | g2rgba(gray) | b2rgba(gray);
-
-	////////////////////////////////
-
-	// Write pixel to destination
-	dst << p_out;
-
-	// Copy previous pixel data to next output pixel
-	p_out = p_in;
-
-	// Increment X and Y counters
-	if (p_in.last)
-	{
-		x = 0;
-		y++;
-	}
-	else
-		x++;
 
 	//-1. transmit
 //	pixel_data p_in;
@@ -693,24 +674,25 @@ void stream(pixel_stream &src, pixel_stream &dst)
 //	dst << p_in;
 
 	// 0. rgb2gray
+#pragma HLS INLINE
+	rgb2gray(src, gray);
 
-//	rgb2gray(src, gray);
-
-//	// 1. Gaussian blur
-//	gaussian(gray, gauss);
+	// 1. Gaussian blur
+#pragma HLS INLINE
+	gaussian(gray, gauss);
 //
 //	// 2. Sobel
-//	Sobel(gauss, sobel, grad_dir);
+	Sobel(gauss, sobel, grad_dir);
 //
 //	// 3. Non-maximum suppression
-//	non_max_sup(sobel, n_max, grad_dir);
+	non_max_sup(sobel, n_max, grad_dir);
 //
 //	// non_max_suppression(sobel, dst, grad_dir);
 //
 //	// 4. Double threshold
-//	double_threshold(n_max, db_thresh);
+	double_threshold(n_max, db_thresh);
 //
 //	// 5. Edge tracking
-//	edge_tracking(db_thresh, dst);
+	edge_tracking(db_thresh, dst);
 
 }
