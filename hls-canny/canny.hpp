@@ -78,3 +78,5 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir);
 void double_threshold(pixel_stream &src, pixel_stream &dst);
 
 void edge_tracking(pixel_stream &src, pixel_stream &dst);
+
+void buf_update(uint8_t pixel, uint8_t &line_buffer, uint8_t &window_buffer, uint8_t cnt, uint16_t x);
