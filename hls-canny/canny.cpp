@@ -475,7 +475,7 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 		for (int j = 0; j<SOBEL_KERNEL_SIZE-1; j++){
 #pragma HLS UNROLL
 			window[i][j] = window[i][j+1];
-			window_grad[i][j] = window[i][j+1];
+			window_grad[i][j] = window_grad[i][j+1];
 		}
 
 	// Fill the new column
@@ -646,44 +646,88 @@ void edge_tracking(pixel_stream &src, pixel_stream &dst)
 		// Store the pixel value in the buffer
 		buffer[cnt][x] = pixel;
 
+	// shift the window -> one position right
+	for (int i = 0; i<SOBEL_KERNEL_SIZE; i++)
+#pragma HLS unroll
+		for (int j = 0; j<SOBEL_KERNEL_SIZE-1; j++){
+#pragma HLS UNROLL
+			window[i][j] = window[i][j+1];
+		}
+
+	// Fill the new column of the window
+
+	for(int i = 0; i<SOBEL_KERNEL_SIZE; ++i){
+#pragma HLS unroll
+		uint8_t index = (cnt+i+1)%SOBEL_KERNEL_SIZE;
+		if (index == cnt)
+			window[i][SOBEL_KERNEL_SIZE-1] = pixel;
+		else
+			window[i][SOBEL_KERNEL_SIZE-1] = buffer[index][x];
+
+	}
+
 	const uint32_t strong_edge = r2rgba(STRONG_EDGE) | g2rgba(STRONG_EDGE) | b2rgba(STRONG_EDGE);
 	// Check if we have enough data to perform the convolution
 	if (y >= 2)
 	{
-		if (buffer[(y - 1) % 3][x - 1] == WEAK_EDGE){
-			bool strong_pixel_close = false;
-			for (int i = 0; i < 3; i++){
-//#pragma HLS PIPELINE II=1
-#pragma HLS UNROLL
-				for (int j = 0; j < 3; j++){
-#pragma HLS UNROLL
-
-//#pragma HLS dependence variable=buffer inter false
-					if (i != 1 && j != 1){
-						strong_pixel_close |= (buffer[(y - j) % 3][x - i] == STRONG_EDGE);
-					}
+		bool strong_pixel_close = false;
+		bool pixel_no_edge = false;
+		for (int i = 0; i < 3; i++)
+			{
+#pragma HLS unroll
+				for (int j = 0; j < 3; j++)
+				{
+#pragma HLS unroll
+					strong_pixel_close |= window[i][j];
+					if(i == 1 && j == 1) pixel_no_edge = !((window[i][j] == WEAK_EDGE) | (window[i][j] == STRONG_EDGE));
 				}
 			}
-			if (/*buffer[(y - 2) % 3][x - 2] == STRONG_EDGE ||
-				buffer[(y - 2) % 3][x - 1] == STRONG_EDGE ||
-				buffer[(y - 2) % 3][x] == STRONG_EDGE ||
-				buffer[(y - 1) % 3][x - 2] == STRONG_EDGE ||
-				buffer[(y - 1) % 3][x] == STRONG_EDGE ||
-				buffer[(y) % 3][x - 2] == STRONG_EDGE ||
-				buffer[(y) % 3][x - 1] == STRONG_EDGE ||
-				buffer[(y) % 3][x] == STRONG_EDGE*/
-					strong_pixel_close
-				) {
-					p_out.data = strong_edge;
-				} else {
-					p_out.data = NO_EDGE;
-				}
-		} else if (buffer[(y - 1) % 3][x - 1] == NO_EDGE) {
+
+		if (!pixel_no_edge){
+			if (strong_pixel_close) p_out.data = strong_edge;
+			else					p_out.data = NO_EDGE;
+		}
+		else {
 			p_out.data = NO_EDGE;
-		} else
-			p_out.data = strong_edge;
+		}
 
 
+
+
+//		if (buffer[(y - 1) % 3][x - 1] == WEAK_EDGE){
+//			bool strong_pixel_close = false;
+//			for (int i = 0; i < 3; i++){
+////#pragma HLS PIPELINE II=1
+//#pragma HLS UNROLL
+//				for (int j = 0; j < 3; j++){
+//#pragma HLS UNROLL
+//
+////#pragma HLS dependence variable=buffer inter false
+//					if (i != 1 && j != 1){
+//						strong_pixel_close |= (buffer[(y - j) % 3][x - i] == STRONG_EDGE);
+//					}
+//				}
+//			}
+//			if (/*buffer[(y - 2) % 3][x - 2] == STRONG_EDGE ||
+//				buffer[(y - 2) % 3][x - 1] == STRONG_EDGE ||
+//				buffer[(y - 2) % 3][x] == STRONG_EDGE ||
+//				buffer[(y - 1) % 3][x - 2] == STRONG_EDGE ||
+//				buffer[(y - 1) % 3][x] == STRONG_EDGE ||
+//				buffer[(y) % 3][x - 2] == STRONG_EDGE ||
+//				buffer[(y) % 3][x - 1] == STRONG_EDGE ||
+//				buffer[(y) % 3][x] == STRONG_EDGE*/
+//					strong_pixel_close
+//				) {
+//					p_out.data = strong_edge;
+//				} else {
+//					p_out.data = NO_EDGE;
+//				}
+//		} else if (buffer[(y - 1) % 3][x - 1] == NO_EDGE) {
+//			p_out.data = NO_EDGE;
+//		} else
+//			p_out.data = strong_edge;
+//
+//
 	}
 	else {
 		// Set output pixel data
