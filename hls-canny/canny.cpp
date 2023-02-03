@@ -439,7 +439,7 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 	// Data to be stored across 'function calls'
 	static uint16_t x = 0; // X coordinate --> cols
 	static uint16_t y = 0; // Y coordinate
-
+	static uint8_t cnt = 0;
 	pixel_data p_in;
 
 	// Load input data from source
@@ -456,10 +456,12 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 	if (p_in.user)
 	{
 		x = y = 0;
+		cnt = 0;
 	}
 
 	uint8_t pixel = rgba2r(p_in.data);
-
+#pragma HLS dependence variable=buffer false
+#pragma HLS dependence variable=buffer_grad false
 	if (x < WIDTH)
 	{
 		//	write the new pixel to the line buffer
@@ -467,24 +469,44 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 		buffer_grad[y % 3][x] = (uint8_t)grad_dir;
 	}
 
+		// shift the window one position right
+	for (int i = 0; i<SOBEL_KERNEL_SIZE; i++)
+#pragma HLS unroll
+		for (int j = 0; j<SOBEL_KERNEL_SIZE-1; j++)
+#pragma HLS UNROLL
+			window[i][j] = window[i][j+1];
 
+	// Fill the new column
+
+	for(int i = 0; i<SOBEL_KERNEL_SIZE; ++i){
+#pragma HLS unroll
+		uint8_t index = (cnt+i+1)%SOBEL_KERNEL_SIZE;
+		if (index == cnt){
+			window[i][SOBEL_KERNEL_SIZE-1] = pixel;
+		}
+		else
+			window[i][SOBEL_KERNEL_SIZE-1] = buffer[index][x];
+
+	}
 	if (y >= SOBEL_KERNEL_SIZE - 1)
 	{
 
-		for (int i = 0; i < 3; i++)
-		{
-#pragma HLS unroll
-			for (int j = 0; j < 3; j++)
-			{
-#pragma HLS unroll
-				window[i][j] = buffer[(y - (2 - i)) % 3][x - (2 - j)];
-				window_grad[i][j] = buffer_grad[(y - (2 - i)) % 3][x - (2 - j)];
-			}
-		}
+//		for (int i = 0; i < 3; i++)
+//		{
+//#pragma HLS unroll
+//			for (int j = 0; j < 3; j++)
+//			{
+//#pragma HLS unroll
+//				window[i][j] = buffer[(y - (2 - i)) % 3][x - (2 - j)];
+//				window_grad[i][j] = buffer_grad[(y - (2 - i)) % 3][x - (2 - j)];
+//			}
+//		}
+
 
 		uint8_t ref1, ref2, _pixel;
 
 		ap_uint<2>_grad_dir = window_grad[1][1];
+#pragma HLS dependence variable=window_grad false
 		// (0 or 180 degrees)
 		if (_grad_dir == 0)
 		{
@@ -539,7 +561,10 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 		p_out.last = 1;
 		// Stored a row of pixels
 		x = 0;
-		y++;
+		cnt ++;
+		if (cnt >= SOBEL_KERNEL_SIZE){
+			cnt = 0;
+		}
 	}
 	else
 		x++;
@@ -551,37 +576,70 @@ void edge_tracking(pixel_stream &src, pixel_stream &dst)
 // #pragma HLS INTERFACE axis port = &src
 // #pragma HLS INTERFACE axis port = &dst
 //  #pragma HLS INTERFACE s_axilite port = mask
+//#pragma HLS PIPELINE II = 1
+//
+//	// Data to be stored across 'function calls'
+//	static uint16_t x = 0; // X coordinate --> cols
+//	static uint16_t y = 0; // Y coordinate
+//
+//	// Buffer to store the pixel values (to be used in the convolution)
+//	static uint8_t buffer[3][WIDTH]; // Gaussian mask
+//#pragma HLS ARRAY_PARTITION variable=buffer complete dim=1
+//#pragma HLS dependence variable=buffer false
+//
+//	// Window is used to perform the convolution in parallel
+//	uint16_t window[3][3]; // Window
+//#pragma HLS ARRAY_PARTITION variable=window complete dim=0
+//	pixel_data p_in;
+//
+//	// Load input data from source
+//	src >> p_in;
+//
+//	// Reset X and Y counters on user signal
+//	if (p_in.user){
+//		x = y = 0;
+//	}
+
 #pragma HLS PIPELINE II = 1
 
 	// Data to be stored across 'function calls'
 	static uint16_t x = 0; // X coordinate --> cols
 	static uint16_t y = 0; // Y coordinate
-
+						   //
 	// Buffer to store the pixel values (to be used in the convolution)
-	static uint8_t buffer[3][WIDTH]; // Gaussian mask
+	static uint8_t buffer[SOBEL_KERNEL_SIZE][WIDTH]; // Gaussian mask
 #pragma HLS ARRAY_PARTITION variable=buffer complete dim=1
+#pragma HLS dependence variable=buffer false
+
 	// Window is used to perform the convolution in parallel
-	uint16_t window[3][3]; // Window
-#pragma HLS ARRAY_PARTITION variable=window complete dim=0
+	static uint8_t window[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE]; // Window
+#pragma HLS ARRAY_PARTITION variable=h_window complete dim=0
+
 	pixel_data p_in;
 
 	// Load input data from source
 	src >> p_in;
 
 	// Reset X and Y counters on user signal
-	if (p_in.user){
+	if (p_in.user)
 		x = y = 0;
-	}
+
 	////////////////////////////////
 
 	// Pixel data to be stored across 'function calls'
 	static pixel_data p_out;
-#pragma HLS dependence variable=buffer false
+
 	uint8_t pixel = rgba2r(p_in.data);
 	// Store pixel value in buffer
+//	if (x < WIDTH)
+//		// Store the pixel value in the buffer
+//		buffer[y % 3][x] = pixel;
+
+	static uint8_t cnt = 0;
+	//		// Store pixel value in buffer
 	if (x < WIDTH)
 		// Store the pixel value in the buffer
-		buffer[y % 3][x] = pixel;
+		buffer[cnt][x] = pixel;
 
 	const uint32_t strong_edge = r2rgba(STRONG_EDGE) | g2rgba(STRONG_EDGE) | b2rgba(STRONG_EDGE);
 	// Check if we have enough data to perform the convolution
@@ -590,10 +648,12 @@ void edge_tracking(pixel_stream &src, pixel_stream &dst)
 		if (buffer[(y - 1) % 3][x - 1] == WEAK_EDGE){
 			bool strong_pixel_close = false;
 			for (int i = 0; i < 3; i++){
-#pragma HLS PIPELINE II=1
+//#pragma HLS PIPELINE II=1
+#pragma HLS UNROLL
 				for (int j = 0; j < 3; j++){
-#pragma HLS PIPELINE II=1
-#pragma HLS dependence variable=buffer inter false
+#pragma HLS UNROLL
+
+//#pragma HLS dependence variable=buffer inter false
 					if (i != 1 && j != 1){
 						strong_pixel_close |= (buffer[(y - j) % 3][x - i] == STRONG_EDGE);
 					}
@@ -636,11 +696,20 @@ void edge_tracking(pixel_stream &src, pixel_stream &dst)
 	////////////////////////////////
 
 	// Increment X and Y counters
+//	if (p_in.last)
+//	{
+//		// Stored a row of pixels
+//		x = 0;
+//		y++;
+//	}
+//	else
+//		x++;
 	if (p_in.last)
 	{
 		// Stored a row of pixels
 		x = 0;
 		y++;
+		cnt = (cnt+1)%SOBEL_KERNEL_SIZE;
 	}
 	else
 		x++;
@@ -693,17 +762,16 @@ ap_uint<2> grad_dir = 0;
 
 //	// 2. Sobel
 //#pragma HLS INLINE
-	Sobel(gauss, dst, grad_dir);
+	Sobel(gauss, sobel, grad_dir);
 
 	// 3. Non-maximum suppression
-//	non_max_sup(sobel, n_max, grad_dir);
+	non_max_sup(sobel, n_max, grad_dir);
 
-//	 non_max_suppression(sobel, dst, grad_dir);
 
 //	// 4. Double threshold
-//	double_threshold(n_max, db_thresh);
-////
-////	// 5. Edge tracking
-//	edge_tracking(db_thresh, dst);
+	double_threshold(n_max, db_thresh);
+
+	// 5. Edge tracking
+	edge_tracking(db_thresh, dst);
 
 }
