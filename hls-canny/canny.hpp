@@ -4,6 +4,14 @@
 
 typedef ap_axiu<32, 1, 1, 1> pixel_data;
 typedef hls::stream<pixel_data> pixel_stream;
+typedef ap_uint<2> uint2_t;
+
+struct grad_pix{
+	pixel_data pixel;
+	uint2_t grad_dir;
+};
+
+typedef hls::stream<grad_pix> grad_pix_stream;
 
 #define rgba2r(v) ((v)&0xFF)
 #define rgba2g(v) (((v)&0xFF00) >> 8)
@@ -20,6 +28,8 @@ typedef hls::stream<pixel_data> pixel_stream;
 #define GAUSS_APPROX 1
 
 #define SOBEL_KERNEL_SIZE 3
+
+
 
 // Approximations source: https://www.researchgate.net/publication/325768087_Gaussian_filtering_for_FPGA_based_image_processing_with_High-Level_Synthesis_tools
 #if GAUSS_APPROX == 0

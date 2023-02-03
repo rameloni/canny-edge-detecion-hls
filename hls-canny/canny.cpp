@@ -200,7 +200,8 @@ void gaussian(pixel_stream &src, pixel_stream &dst)
 
 
 
-void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
+//void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
+void Sobel(pixel_stream &src, pixel_stream &dst)
 {
 
 #pragma HLS PIPELINE II = 1
@@ -232,7 +233,8 @@ void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 	// Pixel data to be stored across 'function calls'
 	static pixel_data p_out;
 
-	grad_dir = 0;
+//	dst.grad_dir = 0;
+	ap_uint<2> grad_dir = 0;
 
 	uint8_t pixel = rgba2r(p_in.data);
 	static uint8_t cnt = 0;
@@ -295,7 +297,7 @@ void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 		}
 
 		// Set output pixel data
-		p_out.data = r2rgba(_pixel) | g2rgba(_pixel) | b2rgba(_pixel);
+		p_out.data = r2rgba(_pixel) | g2rgba(_pixel) | b2rgba(_pixel) | ((grad_dir & 0xFF) << 24);
 
 		// Compute the gradient direction
 //		float dir_rad = hls::atan2(v_pixel, h_pixel);
@@ -432,7 +434,8 @@ void double_threshold(pixel_stream &src, pixel_stream &dst)
 		x++;
 }
 
-void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
+//void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
+void non_max_sup(pixel_stream &src, pixel_stream &dst)
 {
 #pragma HLS PIPELINE II = 1
 	//
@@ -441,10 +444,10 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 	static uint16_t y = 0; // Y coordinate
 	static uint8_t cnt = 0;
 	pixel_data p_in;
-
+	ap_uint<2> grad_dir = 0;
 	// Load input data from source
 	src >> p_in;
-
+	grad_dir = (p_in.data & 0xFF000000) >> 24;
 	static pixel_data p_out;
 
 	// Buffer to store the pixel values (to be used in the convolution)
@@ -466,7 +469,8 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 	{
 		//	write the new pixel to the line buffer
 		buffer[y % 3][x] = pixel;
-		buffer_grad[y % 3][x] = (uint8_t)grad_dir;
+//		buffer_grad[y % 3][x] = (uint8_t)grad_dir;
+		buffer_grad[y % 3][x] = grad_dir;
 	}
 
 		// shift the window one position right
@@ -771,26 +775,25 @@ void stream(pixel_stream &src, pixel_stream &dst, int frame)
 //void stream(pixel_stream &src, pixel_stream &dst)
 {
 //static pixel_stream gray, sobel, gauss, n_max, db_thresh;
-//static ap_uint<2> grad_dir = 0;
+#pragma HLS DATAFLOW disable_start_propagation
 static pixel_stream gray, sobel, gauss, n_max, db_thresh;
-ap_uint<2> grad_dir = 0;
+//hls::stream<uint2_t> grad_dir;
+
+//ap_uint<2> grad_dir_src, grad_dir_dst;
+ap_uint<2> grad_dir;
 #pragma HLS INTERFACE ap_ctrl_none port=return
 #pragma HLS INTERFACE axis port=&src
 #pragma HLS INTERFACE axis port=&dst
-#pragma HLS INTERFACE axis port=grad_dir
-//#pragma HLS STREAM variable = gray depth = 1 dim = 1
-//#pragma HLS STREAM variable = gauss depth = 1 dim = 1
-//#pragma HLS STREAM variable = sobel depth = 2 dim = 1
-//#pragma HLS STREAM variable = n_max depth = 1 dim = 1
-//#pragma HLS STREAM variable = db_thresh depth = 1 dim = 1
+
 
 #pragma HLS STREAM variable = gray depth=3
 #pragma HLS STREAM variable = gauss depth=3
 #pragma HLS STREAM variable = sobel depth=3
 #pragma HLS STREAM variable = n_max depth=3
 #pragma HLS STREAM variable = db_thresh depth=3
+#pragma HLS STREAM variable = grad_dir
 
-#pragma HLS DATAFLOW disable_start_propagation
+
 
 
 
@@ -811,16 +814,17 @@ ap_uint<2> grad_dir = 0;
 
 //	// 2. Sobel
 //#pragma HLS INLINE
-	Sobel(gauss, sobel, grad_dir);
+//	Sobel(gauss, sobel, grad_dir);
+	Sobel(gauss, sobel);
 
 	// 3. Non-maximum suppression
-	non_max_sup(sobel, n_max, grad_dir);
-
+//	non_max_sup(sobel, n_max, grad_dir);
+	non_max_sup(sobel, n_max);
 
 //	// 4. Double threshold
-	double_threshold(n_max, dst);
+	double_threshold(n_max, db_thresh);
 
 	// 5. Edge tracking
-//	edge_tracking(db_thresh, dst);
+	edge_tracking(db_thresh, dst);
 
 }
