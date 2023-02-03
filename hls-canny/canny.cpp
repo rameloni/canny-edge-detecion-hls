@@ -472,9 +472,11 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 		// shift the window one position right
 	for (int i = 0; i<SOBEL_KERNEL_SIZE; i++)
 #pragma HLS unroll
-		for (int j = 0; j<SOBEL_KERNEL_SIZE-1; j++)
+		for (int j = 0; j<SOBEL_KERNEL_SIZE-1; j++){
 #pragma HLS UNROLL
 			window[i][j] = window[i][j+1];
+			window_grad[i][j] = window[i][j+1];
+		}
 
 	// Fill the new column
 
@@ -483,9 +485,12 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir)
 		uint8_t index = (cnt+i+1)%SOBEL_KERNEL_SIZE;
 		if (index == cnt){
 			window[i][SOBEL_KERNEL_SIZE-1] = pixel;
+			window_grad[i][SOBEL_KERNEL_SIZE-1] = grad_dir;
 		}
-		else
+		else{
 			window[i][SOBEL_KERNEL_SIZE-1] = buffer[index][x];
+			window_grad[i][SOBEL_KERNEL_SIZE-1] = buffer_grad[index][x];
+		}
 
 	}
 	if (y >= SOBEL_KERNEL_SIZE - 1)
@@ -769,9 +774,9 @@ ap_uint<2> grad_dir = 0;
 
 
 //	// 4. Double threshold
-	double_threshold(n_max, db_thresh);
+	double_threshold(n_max, dst);
 
 	// 5. Edge tracking
-	edge_tracking(db_thresh, dst);
+//	edge_tracking(db_thresh, dst);
 
 }
