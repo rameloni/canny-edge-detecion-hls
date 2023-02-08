@@ -6,15 +6,7 @@
 typedef ap_axiu<32, 1, 1, 1> pixel_data;
 typedef hls::stream<pixel_data> pixel_stream;
 
-typedef ap_uint<2> uint2_t;
 
-struct grad_pix
-{
-    pixel_data pixel;
-    uint2_t grad_dir;
-};
-
-typedef hls::stream<grad_pix> grad_pix_stream;
 
 // Macros for extracting and combining RGBA components
 #define rgba2r(v) ((v)&0xFF)
