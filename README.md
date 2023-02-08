@@ -1,65 +1,180 @@
-# Canny Edge Detection on Pynq - Group 3 - Reconfigurable Computing Design
+# A Canny Edge Detection for Video Processing on FPGA
 The Canny edge detector uses a multi-stage algorithm to detect a wide range of edges in images and has been widely applied in various computer vision systems. 
+## Authors
+- Raffaele Meloni ([GitHub](https://github.com/rameloni), [LinkedIn](https://www.linkedin.com/in/raffaele-meloni-886a1a208/))
+- Leslie Xu ([GitHub](), [LinkedIn]())
+- Amirreza Movahedin ([GitHub](), [LinkedIn]())
 
-## Algorithm
-The Canny edge detection algorithm has 5 stages:
+## Deliverables
+<!-- :white_large_square: and :heavy_check_mark: -->
+| Deliverable                              | Location                        |
+| ---------------------------------------- | ------------------------------- |
+| Python implementation (software)         | [py-canny/](py-canny)           |
+| HLS implementation (hardware)            | [hls-canny/](hls-canny)         |
+| Jupyter notebook for Pynq-Z1 and Pynq-Z2 | [jupyter-canny/](jupyter-canny) |
+
+## Index
+- [Algorithm](#algorithm)
+- [Software Implementation](#software-implementation)
+- [Hardware Implementation in HLS](#hardware-implementation-in-hls)
+
+
+# Setup
+
+# Algorithm
+The Canny edge detection algorithm has 5 stages (plus a preprocessing stage):
+- **Grayscale conversion** - Converting the input image to grayscale.
 - **Noise Reduction** - Using Gaussian filter to blur the input image and remove the existing noise inside the image.
 - **Gradient calculation** - Calculating the intensity gradients of the image.
 - **Non-maximum suppression** - Determining the appropriate threshold to avoid recognizing edge wrongly.
 - **Double threshold** - Applying a double threshold to determine potential edges.
 - **Edge Tracking by Hysteresis** - Pruning edges with weak values and not connected to strong edges.
 
-## Resources
-- **Canny edge detection based on Open CV**: [https://ieeexplore.ieee.org/abstract/document/8265710](https://ieeexplore.ieee.org/abstract/document/8265710).
-- **An improved Canny edge detection algorithm**: [https://ieeexplore.ieee.org/abstract/document/6885761](https://ieeexplore.ieee.org/abstract/document/6885761). 
+![canny-pipeline](pictures/canny-pipeline-.png)
 
-| Used?                | Resource                                                             | Link                                                                                                           |
-| -------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| :white_large_square: | **Canny edge detection based on Open CV**                            | [https://ieeexplore.ieee.org/abstract/document/8265710](https://ieeexplore.ieee.org/abstract/document/8265710) |
-| :white_large_square: | **An improved Canny edge detection algorithm**                       | [https://ieeexplore.ieee.org/abstract/document/6885761](https://ieeexplore.ieee.org/abstract/document/6885761) |
-| :white_large_square: | **Real-time Canny edge detection parallel implementation for FPGAs** | [https://ieeexplore.ieee.org/abstract/document/5724558](https://ieeexplore.ieee.org/abstract/document/5724558) |
 
-# Project Deliverables
+# Software Implementation
 <!-- :white_large_square: and :heavy_check_mark: -->
+The software implementation of the Canny edge detection algorithm is done in Python. The code is tested on the PYNQ-Z1 and PYNQ-Z2 boards.
+Each stage of the algorithm is implemented in a separate file. A source directory contains all the input images which are read and processed by the code. 
+In the [canny.py](py-canny/canny.py) file, the images are processed, shown and stored for each substep.
 
-| Done                 | Deliverable            |
-| -------------------- | ---------------------- |
-| :white_large_square: | Python code (software) |
-| :white_large_square: | HLS code (hardware)    |
-| :white_large_square: | Report                 |
 
-The codes must be provided in such a manner to allow for quick download to the PYNQ board for quick verification of the achieved results. This means including the bitstream, the hardware handoff file, and a Jupyter notebook to interface to the hardware.
+# Hardware Implementation in **HLS**
+The hardware implementation of the Canny edge detection algorithm is done in **HLS**. The code is tested on the PYNQ-Z1 and PYNQ-Z2 boards. 
+The hardware realization allows to implement a video processing pipeline. Following steps explains how a canny edge detection is implemented in HLS.
 
-# Software
+Each pipeline stage is implemented taking care the latency. Divisions and floating point operations are avoided if possible, since they introduce a lot of latency which might exceeds the timing requirements (7ns).
+
+## High-level block diagram
 <!-- :white_large_square: and :heavy_check_mark: -->
+Video processing pipeline is a sequence of processing blocks that are connected in a chain. Each block is responsible for a specific step.
+HDMI modules handle video frames as streams, therefore FIFOs between pipeline steps are used for flow control.
+The following diagram shows the high-level block diagram of the Canny edge detection algorithm in hardware.
 
-| Done                 | Stage                       | Function Name                | Tested on Pynq       |
-| -------------------- | --------------------------- | ---------------------------- | -------------------- |
-| :heavy_check_mark:   | Noise reduction             | *noise_reduction.py*         | :white_large_square: |
-| :heavy_check_mark:   | Gradient calculation        | *grad_calc.py*               | :white_large_square: |
-| :heavy_check_mark:   | Non-maximum suppression     | *non_maximum_suppression.py* | :white_large_square: |
-| :heavy_check_mark:   | Double threshold            | *double_thresh.py*           | :white_large_square: |
-| :heavy_check_mark:   | Edge Tracking by Hysteresis | *edge_tracking.py*           | :white_large_square: |
+![canny-hw-block-diagram](pictures/canny-hw-pipeline.png)
 
-## Other details
-- Video examples on the PYNQ can be used as a starting point.
-- **Numpy** and/or **OpenCV** can be used to implement the video processing in Python.
-- OpenCV provides functionality to load images and video, then it is also possible towork on this assignment without the PYNQ board by using input data other than an HDMI stream.
-- Write the code for the video processing in a separate file from the notebook. The notebook will call this file then.
+## **Convolution** in hardware
+Hardware handles streams of pixels and it is
+not possible to store full frame completely. Therefore there is no way to iterate an input frame enterely. 
+We implemented a line buffer and sliding window from scratch to perform convolution. 
+The line buffer stores the input frame line by line.
 
-## Performance recording
-Once the algorithm is implemented in Python:
-- Performance can be recorded by measuring the framerate of the output stream. Do that on Pynq.
-- Video examples already give a way to do this.
+![line-buffer](pictures/line-buffer.png)
 
-# Hardware
-| Done                 | Stage                       | Block Name                                    | Tested on Pynq       |
-| -------------------- | --------------------------- | --------------------------------------------- | -------------------- |
-| :white_large_square: | Noise reduction             | *Put here the HLS block name (to keep track)* | :white_large_square: |
-| :white_large_square: | Gradient calculation        | *Put here the HLS block name (to keep track)* | :white_large_square: |
-| :white_large_square: | Non-maximum suppression     | *Put here the HLS block name (to keep track)* | :white_large_square: |
-| :white_large_square: | Double threshold            | *Put here the HLS block name (to keep track)* | :white_large_square: |
-| :white_large_square: | Edge Tracking by Hysteresis | *Put here the HLS block name (to keep track)* | :white_large_square: |
+The sliding window is a 2D array that is moved over the line buffer to perform the convolution.
+
+![sliding-window](pictures/sliding-window.png)
+
+## HLS substages implementation
+
+### Grayscale conversion
+It is a preprocessing step that converts the input image to grayscale. The HLS code is implemented in the [grayscale.cpp](hls-canny/grayscale.cpp) file.
+There are multiple ways to convert an image to grayscale. The HLS code uses the following formula:
+    
+    Gray = Red ∗ 0.25 + Green ∗ 0.5 + Blue ∗ 0.25
+
+We chose to use this approximation instead of other well known approaches since it avoids floating point operations and divisions. In fact, it can be implemented in hardware through shift operations which are particurarly suited for FPGAs:
+
+    Gray = (Red + Green << 1 + Blue) >> 2
+
+| Input image                  | Grayscale image                      |
+| ---------------------------- | ------------------------------------ |
+| ![input](pictures/input.jpg) | ![grayscale](pictures/grayscale.png) |
+
+### Noise reduction -Ggaussian blur
+The Canny algorithm is extremely sensitive to noise. Noise reduction allows to detect better the edges in the image.
+The Gaussian blur is a common technique used to reduce noise in images using a convolution kernel.
+
+$K(x, y) = \frac{1}{\sqrt{2\pi \sigma^2}} e^{-\frac{x^2+y^2}{2\sigma^2}} =\frac{1}{\sqrt{2\pi}} e^{-\frac{x^2+y^2}{2}}$ for $\sigma = 1$
+
+But it leads to a floating point kernel, which is not well suited for hardware implementation. Therefore, we decided to use an approximation which provides a good trade-off between accuracy and performance. This approximation exploits shift operations and integer arithmetic.
+$$\begin{equation*}
+    K_{approx} = \frac{1}{256}
+    \begin{bmatrix}
+    1 & 4 & 6 & 4 & 1 \\
+    4 & 16 & 24 & 16 & 4 \\
+    6 & 24 & 36 & 24 & 6 \\
+    4 & 16 & 24 & 16 & 4 \\
+    1 & 4 & 6 & 4 & 1
+    \end{bmatrix}
+\end{equation*}$$
+
+| Input image (grayscaled)             | Gaussian blur image                          |
+| ------------------------------------ | -------------------------------------------- |
+| ![grayscale](pictures/grayscale.png) | ![gaussian-blur](pictures/gaussian-blur.png) |
+
+### Gradient calculation - Sobel
+This step of the pipeline, the intensity and direction of the edges are detected. 
+An edge is a sudden change in the intensity of the image. 
+The Sobel operator is used to calculate the intensity gradient of the image.
+Two kernels are convolutioned with the image to calculate the gradient in the horizontal (y) and vertical (x) direction.
+$$\begin{equation*}
+    K_x=
+    \begin{bmatrix}
+    -1 & 0 & 1 \\
+    -2 & 0 & 2 \\
+    -1 & 0 & 1
+    \end{bmatrix},\:
+    K_y=
+    \begin{bmatrix}
+    1 & 2 & 1 \\
+    0 & 0 & 0 \\
+    -1 & -2 & -1
+    \end{bmatrix}
+\end{equation*}$$
+
+The convolution prouduces two derivatives in the x and y direction ($I_x, I_y$). 
+The gradient magnitude is calculated using an approximation of the Pythagorean theorem in order to save latency: 
+
+$out(x, y) = \sqrt{I_x^2 + I_y^2} \approx |I_x| + |I_y|$.
+
+The gradient direction is calculated using an approximation of the tangent function:
+
+$tan(x, y) \approx \frac{I_y}{I_x}$ this value is compared with known values of the tangent function of 4 direction regions:
+- Completely horizontal: 0° or 180° (*from -22.5° to 22.5°*)
+- Completely vertical: 90° or 270° (*from 67.5° to 112.5°*)
+- Positive slope: 45° or 225° (*from 22.5° to 67.5°*)
+- Negative slope: 135° or 315° (*from 112.5° to 157.5°*)
+
+| Input image (grayscaled)             | Sobel image                               |
+| ------------------------------------ | ----------------------------------------- |
+| ![grayscale](pictures/grayscale.png) | ![gradient-magnitude](pictures/sobel.png) |
+
+
+### Non-maximum suppression
+Ideally the final image should have thinner the edges.
+The non-maximum suppression step is used to thin the edges in the image.
+The gradient direction is used to determine the direction of the edge and the gradient magnitude is used to determine the strength of the edge.
+
+Basing on the direction 2 neighboring pixels are compared to the processed pixel. 
+If the intensity of either one of the 2 pixels is higher than the processed pixel, the output pixel (weaker) corresponding to the processed pixel is set to 0. Otherwise, the processed pixel remains its value.
+
+The line buffer and the sliding window are used for the comparison in this step.
+
+Despite the result is not clear in the image below, the effect is more visible once all the steps are combined. In fact in the end we provide a comparison between canny with and without the non maximum suppression step.
+| Input image (grayscaled)             | Non-maximum suppression image                                    |
+| ------------------------------------ | ---------------------------------------------------------------- |
+| ![grayscale](pictures/grayscale.png) | ![non-maximum-suppression](pictures/non-maximum-suppression.png) |
+
+### Double threshold
+
+| Input image (grayscaled)             | Double threshold image                             |
+| ------------------------------------ | -------------------------------------------------- |
+| ![grayscale](pictures/grayscale.png) | ![double-threshold](pictures/double-threshold.png) |
+
+### Edge tracking by hysteresis
+
+| Input image (grayscaled)             | Edge tracking by hysteresis image (**Final result**) |
+| ------------------------------------ | ---------------------------------------------------- |
+| ![grayscale](pictures/grayscale.png) | ![edge-tracking-by-hysteresis](pictures/canny.png)   |
+### Comparison between Canny with and without non-maximum suppression
+
+| Canny image                    | Canny image (without non-maximum suppression) |
+| ------------------------------ | --------------------------------------------- |
+| ![canny](pictures/canny.png)   | ![canny](pictures/canny-no-nms.png)           |
+| ![canny](pictures/canny-2.png) | ![canny](pictures/canny-2-no-nms.png)         |
+| ![canny](pictures/canny-2.png) | ![canny](pictures/canny-2-no-nms.png)         |
 
 ## Add custom IP
 - Use the example `run.tcl` tcl file to setup the IP diagram on Vivado. `source run.tcl`

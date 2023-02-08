@@ -234,7 +234,6 @@ void Sobel(pixel_stream &src, pixel_stream &dst)
 	static pixel_data p_out;
 
 //	dst.grad_dir = 0;
-	ap_uint<2> grad_dir = 0;
 
 	uint8_t pixel = rgba2r(p_in.data);
 	static uint8_t cnt = 0;
@@ -271,6 +270,8 @@ void Sobel(pixel_stream &src, pixel_stream &dst)
 		int32_t h_pixel = 0;
 		int32_t v_pixel = 0;
 		uint32_t _pixel = 0;
+		uint32_t grad_dir = 0;
+
 		// Perform the multiplication step
 
 
@@ -296,9 +297,7 @@ void Sobel(pixel_stream &src, pixel_stream &dst)
 			_pixel = 255;
 		}
 
-		// Set output pixel data
-		p_out.data = r2rgba(_pixel) | g2rgba(_pixel) | b2rgba(_pixel) | ((grad_dir & 0xFF) << 24);
-
+	
 		// Compute the gradient direction
 //		float dir_rad = hls::atan2(v_pixel, h_pixel);
 		// Tangent approximation
@@ -326,13 +325,16 @@ void Sobel(pixel_stream &src, pixel_stream &dst)
 		            // dir = 90
 		            grad_dir = 2;
 		        }
+					// Set output pixel data
+		p_out.data = r2rgba(_pixel) | g2rgba(_pixel) | b2rgba(_pixel) | a2rgba(grad_dir);
+
 
 	} else {
 		// Set output pixel data
 		p_out.data = p_in.data;
 	}
 
-	// Store the pixel value in the
+	// Set output pixel data
 
 	// Write pixel to destination
 	dst << p_out;
@@ -444,17 +446,15 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst)
 	static uint16_t y = 0; // Y coordinate
 	static uint8_t cnt = 0;
 	pixel_data p_in;
-	ap_uint<2> grad_dir = 0;
 	// Load input data from source
 	src >> p_in;
-	grad_dir = (p_in.data & 0xFF000000) >> 24;
 	static pixel_data p_out;
 
 	// Buffer to store the pixel values (to be used in the convolution)
 	static uint32_t buffer[3][WIDTH];
-	static ap_uint<2> buffer_grad[3][WIDTH];
-	uint32_t window[3][3];
-	ap_uint<2> window_grad[3][3];
+	static uint8_t buffer_grad[3][WIDTH];
+	static uint32_t window[3][3];
+	static uint8_t window_grad[3][3];
 
 	if (p_in.user)
 	{
@@ -462,21 +462,26 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst)
 		cnt = 0;
 	}
 
+	uint8_t grad_dir = rgba2a(p_in.data);
 	uint8_t pixel = rgba2r(p_in.data);
+
 #pragma HLS dependence variable=buffer false
 #pragma HLS dependence variable=buffer_grad false
 	if (x < WIDTH)
 	{
 		//	write the new pixel to the line buffer
-		buffer[y % 3][x] = pixel;
+		buffer[cnt][x] = pixel;
 //		buffer_grad[y % 3][x] = (uint8_t)grad_dir;
-		buffer_grad[y % 3][x] = grad_dir;
+		buffer_grad[cnt][x] = grad_dir;
+
+		// if(grad_dir == 3)
+		// 	printf("%d", grad_dir);
 	}
 
 		// shift the window one position right
-	for (int i = 0; i<SOBEL_KERNEL_SIZE; i++)
+	for (int i = 0; i<3; i++)
 #pragma HLS unroll
-		for (int j = 0; j<SOBEL_KERNEL_SIZE-1; j++){
+		for (int j = 0; j<2; j++){
 #pragma HLS UNROLL
 			window[i][j] = window[i][j+1];
 			window_grad[i][j] = window_grad[i][j+1];
@@ -484,20 +489,20 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst)
 
 	// Fill the new column
 
-	for(int i = 0; i<SOBEL_KERNEL_SIZE; ++i){
+	for(int i = 0; i<3; ++i){
 #pragma HLS unroll
-		uint8_t index = (cnt+i+1)%SOBEL_KERNEL_SIZE;
+		uint8_t index = (cnt+i+1)%3;
 		if (index == cnt){
-			window[i][SOBEL_KERNEL_SIZE-1] = pixel;
-			window_grad[i][SOBEL_KERNEL_SIZE-1] = grad_dir;
+			window[i][2] = pixel;
+			window_grad[i][2] = grad_dir;
 		}
 		else{
-			window[i][SOBEL_KERNEL_SIZE-1] = buffer[index][x];
-			window_grad[i][SOBEL_KERNEL_SIZE-1] = buffer_grad[index][x];
+			window[i][2] = buffer[index][x];
+			window_grad[i][2] = buffer_grad[index][x];
 		}
 
 	}
-	if (y >= SOBEL_KERNEL_SIZE - 1)
+	if (y >= 2)
 	{
 
 //		for (int i = 0; i < 3; i++)
@@ -512,9 +517,9 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst)
 //		}
 
 
-		uint8_t ref1, ref2, _pixel;
+		uint8_t ref1=0xFF, ref2, _pixel;
 
-		ap_uint<2>_grad_dir = window_grad[1][1];
+		uint8_t _grad_dir = window_grad[1][1];
 #pragma HLS dependence variable=window_grad false
 		// (0 or 180 degrees)
 		if (_grad_dir == 0)
@@ -540,13 +545,14 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst)
 			ref1 = window[0][2];
 			ref2 = window[2][0];
 		}
-
+//		ref1 = 0xFF;
 		if (window[1][1] < ref1 || window[1][1] < ref2)
 		{
 			_pixel = 0;
 		}
 		else
 			_pixel = window[1][1];
+
 		p_out.data = r2rgba(_pixel) | b2rgba(_pixel) | g2rgba(_pixel);
 	}
 	else
@@ -570,10 +576,9 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst)
 		p_out.last = 1;
 		// Stored a row of pixels
 		x = 0;
-		cnt ++;
-		if (cnt >= SOBEL_KERNEL_SIZE){
-			cnt = 0;
-		}
+		y++;
+		cnt = (cnt+1)%3;
+
 	}
 	else
 		x++;
