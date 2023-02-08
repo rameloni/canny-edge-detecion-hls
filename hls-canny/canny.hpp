@@ -2,8 +2,10 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
 
+// Typedefs for the AXI4-Stream interface
 typedef ap_axiu<32, 1, 1, 1> pixel_data;
 typedef hls::stream<pixel_data> pixel_stream;
+
 typedef ap_uint<2> uint2_t;
 
 struct grad_pix
@@ -14,6 +16,7 @@ struct grad_pix
 
 typedef hls::stream<grad_pix> grad_pix_stream;
 
+// Macros for extracting and combining RGBA components
 #define rgba2r(v) ((v)&0xFF)
 #define rgba2g(v) (((v)&0xFF00) >> 8)
 #define rgba2b(v) (((v)&0xFF0000) >> 16)
@@ -24,13 +27,16 @@ typedef hls::stream<grad_pix> grad_pix_stream;
 #define b2rgba(v) (((v)&0xFF) << 16)
 #define a2rgba(v) (((v)&0xFF) << 24)
 
+// Image parameters
 #define WIDTH 1280
 #define HEIGHT 720
 
+// Gaussian blur parameters
 #define GAUSSIAN_MASK_SIZE 5
 
 #define GAUSS_APPROX 1
 
+// Sobel edge detection parameters
 #define SOBEL_KERNEL_SIZE 3
 
 // Approximations source: https://www.researchgate.net/publication/325768087_Gaussian_filtering_for_FPGA_based_image_processing_with_High-Level_Synthesis_tools
@@ -60,6 +66,7 @@ const uint32_t GAUSSIAN_MASK[GAUSSIAN_MASK_SIZE][GAUSSIAN_MASK_SIZE] = {{11, 53,
                                                                         {11, 53, 88, 53, 11}};
 #endif
 
+// Sobel kernels
 const int H_SOBEL_KERNEL[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE] = {{-1, 0, 1},
                                                                   {-2, 0, 2},
                                                                   {-1, 0, 1}};
@@ -75,7 +82,7 @@ const int V_SOBEL_KERNEL[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE] = {{1, 2, 1},
 #define WEAK_EDGE 127
 #define NO_EDGE 0
 
-void canny(pixel_stream &src, pixel_stream &dst);
+// void canny(pixel_stream &src, pixel_stream &dst);
 
 // Perform a conversion from RGB to grayscale
 void rgb2gray(pixel_stream &src, pixel_stream &dst);
@@ -83,12 +90,14 @@ void rgb2gray(pixel_stream &src, pixel_stream &dst);
 // Gaussian blur
 void gaussian(pixel_stream &src, pixel_stream &dst);
 
-void Sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir);
+// Sobel edge detection
+void sobel(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir);
 
+// Non-maximum suppression
 void non_max_sup(pixel_stream &src, pixel_stream &dst, ap_uint<2> &grad_dir);
 
+// Double thresholding
 void double_threshold(pixel_stream &src, pixel_stream &dst);
 
+// Edge tracking
 void edge_tracking(pixel_stream &src, pixel_stream &dst);
-
-void buf_update(uint8_t pixel, uint8_t &line_buffer, uint8_t &window_buffer, uint8_t cnt, uint16_t x);
