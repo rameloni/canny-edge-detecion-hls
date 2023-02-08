@@ -24,7 +24,7 @@ if __name__ == '__main__':
     filenames = os.listdir(orig_dir)
     for filename in filenames:
         print(filename)
-        
+
         # Read the image
         img = cv2.imread(orig_dir+filename)
         # img = cv2.imread('./pictures/img.png')
@@ -81,16 +81,17 @@ if __name__ == '__main__':
         stop6 = time.time()
         # 6. Save the image
         cv2.imwrite(outpath+'canny-'+filename, img_final)
-        
-        edges = cv2.Canny(img,20,10, L2gradient=False)
+
+        edges = cv2.Canny(img, 20, 10, L2gradient=False)
         cv2.imwrite(outpath+'canny-'+filename+'cv2.png', edges)
         stop = time.time()
-        runtime = stop1+start2+stop3+stop4+stop5+stop6 - (start1+start2+start3+start4+start5+start6)
+        runtime = stop1+start2+stop3+stop4+stop5+stop6 - \
+            (start1+start2+start3+start4+start5+start6)
         print("time used: ", runtime)
-        # 7. Show the images    
+        # 7. Show the images
         plt.subplot(2, 3, 1)
         plt.imshow(img, cmap='gray')
-        edges = cv2.Canny(img,100,200, L2gradient=True)
+        edges = cv2.Canny(img, 100, 200, L2gradient=True)
         plt.title('0-Original')
 
         plt.subplot(2, 3, 2)
@@ -113,8 +114,6 @@ if __name__ == '__main__':
         plt.imshow(img_final, cmap='gray')
         plt.title('5-Edge Tracking')
 
-
         cv2.imshow('Canny', edges)
-
 
         plt.show()

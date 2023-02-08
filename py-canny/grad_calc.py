@@ -3,6 +3,8 @@ import cv2
 import matplotlib.pyplot as plt
 from PIL import Image
 from scipy import ndimage
+
+
 def sobel_filter(image):
 
     # # Apply Sobelx in high output datatype 'float32'
@@ -41,7 +43,7 @@ def sobel_filter(image):
 
     im_x = im_x.reshape(im_shape)
     im_y = im_y.reshape(im_shape)
-    
+
     # Combine the results to produce the final image
     im_sobel = np.sqrt(np.square(im_x) + np.square(im_y))
 
@@ -64,16 +66,16 @@ def sobel_filter(image):
     # print(Iy.shape)
     theta = np.arctan2(Iy, Ix)
 
-
     return (img_sobel, theta)
 
 
 if __name__ == '__main__':
 
-    img = Image.open("C:\\Users\\amirr\\Desktop\\Education\\TU Delft\\Q2\\Reconfigurable Computing Design\\edgedetection1.jpg")
+    img = Image.open(
+        "C:\\Users\\amirr\\Desktop\\Education\\TU Delft\\Q2\\Reconfigurable Computing Design\\edgedetection1.jpg")
 
     img_arr = np.array(img)
-    # img_arr = cv2.fastNlMeansDenoising(img_arr, None, 20, 7, 21) 
+    # img_arr = cv2.fastNlMeansDenoising(img_arr, None, 20, 7, 21)
 
     img_sobel = sobel_filter(img_arr)
 

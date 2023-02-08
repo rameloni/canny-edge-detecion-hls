@@ -23,7 +23,7 @@ def gauss_kernel(size_kernel=3, sigma=1):
     for i in range(size_kernel):
         for j in range(size_kernel):
             x, y = i - center, j - center
-            kernel[i, j] = np.exp(-(x**2+ y**2) / (2.0*sigma**2))
+            kernel[i, j] = np.exp(-(x**2 + y**2) / (2.0*sigma**2))
 
     # x, y = np.mgrid[-size_kernel:size_kernel+1, -size_kernel:size_kernel+1]
     # g =  np.exp(-((x**2 + y**2) / (2.0*sigma**2))) * normal
@@ -32,7 +32,7 @@ def gauss_kernel(size_kernel=3, sigma=1):
     return kernel / kernel.sum()
     # return kernel * normal
 
-    
+
 # This function performs the noise reduction.
 # This is a prelimanry step which is needed before detecting edge of the image.
 # It uses the Gaussian smoothing filter in order to reduce noise.
@@ -47,19 +47,22 @@ def denoise_conv_manual(in_image, size_kernel=3, sigma=1):
     # print("pad_width", pad_width)
 
     # Pad the image
-    img_pad = np.pad(in_image, ((pad_width, pad_width), (pad_width, pad_width)), mode='reflect')
+    img_pad = np.pad(in_image, ((pad_width, pad_width),
+                     (pad_width, pad_width)), mode='reflect')
     # print("img shape", np.shape(in_image))
     # print("img_pad shape", np.shape(img_pad))
-    
+
     # Convolution
     for i in range(in_image.shape[0]):
         for j in range(in_image.shape[1]):
-            filtered_image[i, j] = (kernel * img_pad[i:i+size_kernel, j:j+size_kernel]).sum()
-    
+            filtered_image[i, j] = (
+                kernel * img_pad[i:i+size_kernel, j:j+size_kernel]).sum()
+
     return filtered_image
 
+
 def denoise(in_image, size_kernel=5, sigma=1):
-     # Create a kernel
+    # Create a kernel
     kernel = gauss_kernel(size_kernel, sigma)
 
     # Apply the kernel as a convolution through the filter2D function
@@ -68,6 +71,7 @@ def denoise(in_image, size_kernel=5, sigma=1):
     # cv2.fastNlMeansDenoising(in_image, filtered_image, 10, 7, 21)
     # return cv2.GaussianBlur(in_image, (size_kernel, size_kernel), sigma)
     return filtered_image
+
 
 if __name__ == '__main__':
     # SCRIPT
@@ -81,4 +85,5 @@ if __name__ == '__main__':
     cv2.imwrite('pictures/gauss-Image.1.jpg', out_image)
 
     # Denoise the image manually (without using the filter2D function) in order to compare the results
-    cv2.imwrite('pictures/gauss-Image-manual-conv.1.jpg', denoise_conv_manual(gray))
+    cv2.imwrite('pictures/gauss-Image-manual-conv.1.jpg',
+                denoise_conv_manual(gray))
