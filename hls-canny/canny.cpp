@@ -217,7 +217,7 @@ void Sobel(pixel_stream &src, pixel_stream &dst)
 
 	// Window is used to perform the convolution in parallel
 	static uint8_t window[SOBEL_KERNEL_SIZE][SOBEL_KERNEL_SIZE]; // Window
-#pragma HLS ARRAY_PARTITION variable=h_window complete dim=0
+#pragma HLS ARRAY_PARTITION variable=window complete dim=0
 
 	pixel_data p_in;
 
@@ -305,7 +305,7 @@ void Sobel(pixel_stream &src, pixel_stream &dst)
 		            grad_dir = 2;
 		        else
 		        {
-		        int32_t dir_angle = (v_pixel << 8) / h_pixel;
+		        int16_t dir_angle = (v_pixel << 8) / h_pixel;
 
 		        // Direction: 0: (0� || 180�), 1: (45� || -45�), 2: (90� || -90�), 3: (135 || -135�)
 
@@ -452,21 +452,29 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst)
 
 	// Buffer to store the pixel values (to be used in the convolution)
 	static uint32_t buffer[3][WIDTH];
+#pragma HLS ARRAY_RESHAPE variable=buffer factor=3 dim=1 cyclic
+#pragma HLS dependence variable=buffer false
+
 	static uint8_t buffer_grad[3][WIDTH];
+#pragma HLS ARRAY_PARTITION variable=buffer_grad complete dim=1
+#pragma HLS dependence variable=buffer_grad false
+
 	static uint32_t window[3][3];
+#pragma HLS ARRAY_PARTITION variable=window complete dim=0
+
 	static uint8_t window_grad[3][3];
+#pragma HLS ARRAY_PARTITION variable=window_grad complete dim=0
+
 
 	if (p_in.user)
 	{
 		x = y = 0;
-		cnt = 0;
 	}
 
-	uint8_t grad_dir = rgba2a(p_in.data);
 	uint8_t pixel = rgba2r(p_in.data);
+	uint8_t grad_dir = rgba2a(p_in.data);
 
-#pragma HLS dependence variable=buffer false
-#pragma HLS dependence variable=buffer_grad false
+
 	if (x < WIDTH)
 	{
 		//	write the new pixel to the line buffer
@@ -493,31 +501,33 @@ void non_max_sup(pixel_stream &src, pixel_stream &dst)
 #pragma HLS unroll
 		uint8_t index = (cnt+i+1)%3;
 		if (index == cnt){
-			window[i][2] = pixel;
+//			window[i][2] = pixel;
 			window_grad[i][2] = grad_dir;
 		}
 		else{
-			window[i][2] = buffer[index][x];
+//			window[i][2] = buffer[index][x];
 			window_grad[i][2] = buffer_grad[index][x];
 		}
+	} // end for
 
-	}
+	for(int i = 0; i<3; ++i){
+#pragma HLS unroll
+			uint8_t index = (cnt+i+1)%3;
+			if (index == cnt){
+				window[i][2] = pixel;
+//				window_grad[i][2] = grad_dir;
+			}
+			else{
+				window[i][2] = buffer[index][x];
+//				window_grad[i][2] = buffer_grad[index][x];
+			}
+	} // end for
+
+
 	if (y >= 2)
 	{
 
-//		for (int i = 0; i < 3; i++)
-//		{
-//#pragma HLS unroll
-//			for (int j = 0; j < 3; j++)
-//			{
-//#pragma HLS unroll
-//				window[i][j] = buffer[(y - (2 - i)) % 3][x - (2 - j)];
-//				window_grad[i][j] = buffer_grad[(y - (2 - i)) % 3][x - (2 - j)];
-//			}
-//		}
-
-
-		uint8_t ref1=0xFF, ref2, _pixel;
+		uint8_t ref1, ref2, _pixel;
 
 		uint8_t _grad_dir = window_grad[1][1];
 #pragma HLS dependence variable=window_grad false
