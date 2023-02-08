@@ -7,6 +7,7 @@
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+import time
 
 from noise_reduction import denoise
 from grad_calc import sobel_filter
@@ -17,25 +18,27 @@ from edge_tracking import edge_tracking
 import os
 
 if __name__ == '__main__':
-    in_dir = 'pictures/'
+    in_dir = './pictures/'
     orig_dir = in_dir+'origin/'
 
     filenames = os.listdir(orig_dir)
     for filename in filenames:
         print(filename)
-
+        
         # Read the image
         img = cv2.imread(orig_dir+filename)
-        # img = cv2.imread('pictures/img.png')
+        # img = cv2.imread('./pictures/img.png')
+        start1 = time.time()
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
+        stop1 = time.time()
         ####################################################
         # 1. Denoise the image
         outpath = in_dir+'1_denoise/'
         if not os.path.exists(outpath):
             os.makedirs(outpath)
-
+        start2 = time.time()
         img_den = denoise(img, size_kernel=5)
+        stop2 = time.time()
         cv2.imwrite(outpath+'denoised-'+filename, img_den)
 
         ####################################################
@@ -43,8 +46,9 @@ if __name__ == '__main__':
         outpath = in_dir+'2_sobel/'
         if not os.path.exists(outpath):
             os.makedirs(outpath)
-
+        start3 = time.time()
         img_sobel, theta = sobel_filter(img_den)
+        stop3 = time.time()
         cv2.imwrite(outpath+'sobel-'+filename, np.uint8(img_sobel))
 
         ####################################################
@@ -52,8 +56,9 @@ if __name__ == '__main__':
         outpath = in_dir+'3_non_max/'
         if not os.path.exists(outpath):
             os.makedirs(outpath)
-
+        start4 = time.time()
         img_sup = non_max_sup(img_sobel, theta)
+        stop4 = time.time()
         cv2.imwrite(outpath+'non_max_sup'+filename, img_sup)
 
         ####################################################
@@ -61,8 +66,9 @@ if __name__ == '__main__':
         outpath = in_dir+'4_thresh/'
         if not os.path.exists(outpath):
             os.makedirs(outpath)
-
+        start5 = time.time()
         img_thresh, weak, strong = threshold(img_sup)
+        stop5 = time.time()
         cv2.imwrite(outpath+'thresh-'+filename, img_thresh)
 
         ####################################################
@@ -70,13 +76,17 @@ if __name__ == '__main__':
         outpath = in_dir+'5_canny/'
         if not os.path.exists(outpath):
             os.makedirs(outpath)
+        start6 = time.time()
         img_final = edge_tracking(img_thresh, weak, strong)
+        stop6 = time.time()
         # 6. Save the image
         cv2.imwrite(outpath+'canny-'+filename, img_final)
         
         edges = cv2.Canny(img,20,10, L2gradient=False)
         cv2.imwrite(outpath+'canny-'+filename+'cv2.png', edges)
-        
+        stop = time.time()
+        runtime = stop1+start2+stop3+stop4+stop5+stop6 - (start1+start2+start3+start4+start5+start6)
+        print("time used: ", runtime)
         # 7. Show the images    
         plt.subplot(2, 3, 1)
         plt.imshow(img, cmap='gray')
