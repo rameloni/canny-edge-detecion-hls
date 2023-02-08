@@ -1,0 +1,13 @@
+# docs requirements file
+
+# For Juyter Notebooks in Sphinx
+
+numpy
+matplotlib
+nbsphinx
+pynq
+jupyter_client
+cffi
+ipython
+pytest
+netifaces

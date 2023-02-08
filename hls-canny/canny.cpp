@@ -626,7 +626,8 @@ void edge_tracking(pixel_stream &src, pixel_stream &dst)
 			for (int j = 0; j < 3; j++)
 			{
 #pragma HLS unroll
-				strong_pixel_close |= window[i][j];
+//				strong_pixel_close |= window[i][j];
+				strong_pixel_close |= (window[i][j] == 0);
 				if (i == 1 && j == 1)
 					pixel_no_edge = !((window[i][j] == WEAK_EDGE) | (window[i][j] == STRONG_EDGE));
 			}
