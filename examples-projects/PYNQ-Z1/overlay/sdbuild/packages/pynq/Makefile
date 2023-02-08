@@ -1,1 +1,0 @@
-PACKAGE_BUILD_pynq += ${PYNQ_UPDATE}
