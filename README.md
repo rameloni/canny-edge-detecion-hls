@@ -3,7 +3,7 @@ The Canny edge detector uses a multi-stage algorithm to detect a wide range of e
 ## Authors
 - Raffaele Meloni ([GitHub](https://github.com/rameloni), [LinkedIn](https://www.linkedin.com/in/raffaele-meloni-886a1a208/))
 - Leslie Xu ([GitHub](), [LinkedIn]())
-- Amirreza Movahedin ([GitHub](), [LinkedIn]())
+- Amirreza Movahedin ([GitHub](https://github.com/AmirrezaMov), [LinkedIn](https://www.linkedin.com/in/amirreza-movahedin-893652151/))
 
 ## Deliverables
 <!-- :white_large_square: and :heavy_check_mark: -->
