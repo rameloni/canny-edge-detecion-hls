@@ -68,8 +68,8 @@ The sliding window is a 2D array that is moved over the line buffer to perform t
 
 ![sliding-window](pictures/sliding-window.png)
 
-## HLS substages implementation
 ----------
+## HLS substages implementation
 ### 0. Grayscale conversion
 It is a preprocessing step that converts the input image to grayscale. The HLS code is implemented in the [grayscale.cpp](hls-canny/grayscale.cpp) file.
 There are multiple ways to convert an image to grayscale. The HLS code uses the following formula:
@@ -139,9 +139,9 @@ $tan(x, y) \approx \frac{I_y}{I_x}$ this value is compared with known values of 
 - Positive slope: 45° or 225° (*from 22.5° to 67.5°*)
 - Negative slope: 135° or 315° (*from 112.5° to 157.5°*)
 
-| Input image (grayscaled)                 | Sobel image                                   |
-| ---------------------------------------- | --------------------------------------------- |
-| ![grayscale](pictures/hls/grayscale.png) | ![gradient-magnitude](pictures/hls/sobel.png) |
+| Input image (gaussian blur)                  | Sobel image                                   |
+| -------------------------------------------- | --------------------------------------------- |
+| ![grayscale](pictures/hls/gaussian-blur.png) | ![gradient-magnitude](pictures/hls/sobel.png) |
 
 
 ### 3. Non-maximum suppression
@@ -154,22 +154,50 @@ If the intensity of either one of the 2 pixels is higher than the processed pixe
 
 The line buffer and the sliding window are used for the comparison in this step.
 
-Despite the result is not clear in the image below, the effect is more visible once all the steps are combined. In fact in the end we provide a comparison between canny with and without the non maximum suppression step.
-| Input image (grayscaled)                 | Non-maximum suppression image                                        |
-| ---------------------------------------- | -------------------------------------------------------------------- |
-| ![grayscale](pictures/hls/grayscale.png) | ![non-maximum-suppression](pictures/hls/non-maximum-suppression.png) |
+After this stage the output image results thinner compared to the previous one.
+
+| Input image (sobel)                  | Non-maximum suppression image                                        |
+| ------------------------------------ | -------------------------------------------------------------------- |
+| ![grayscale](pictures/hls/sobel.png) | ![non-maximum-suppression](pictures/hls/non-maximum-suppression.png) |
 
 ### 4. Double threshold
+Three kinds of edges are detected in the image: strong, weak and non-relevant:
+- The strong edges contribute to the final edge.
+- The non-relevant edges does not contribute to the final edge.
+- The weak edges contribute to the final edge only if they are connected to a strong edge. (*This is checked in the next step*)
 
-| Input image (grayscaled)                 | Double threshold image                                 |
-| ---------------------------------------- | ------------------------------------------------------ |
-| ![grayscale](pictures/hls/grayscale.png) | ![double-threshold](pictures/hls/double-threshold.png) |
+Two thresholds are used to classify the edges:
+- The high threshold is used to classify the strong edges from the weak edges.
+- The low threshold is used to classify the weak edges from the non-relevant edges. 
+
+Neither line buffer nor sliding window are used in this step. Each pixel is processed independently, compared with the thresholds and the output is generated.
+
+| Input image (non-maximum-suppression)                  | Double threshold image                                 |
+| ------------------------------------------------------ | ------------------------------------------------------ |
+| ![grayscale](pictures/hls/non-maximum-suppression.png) | ![double-threshold](pictures/hls/double_threshold.png) |
 
 ### 5. Edge tracking by hysteresis (**last pipeline stage**)
+This step is used to connect the weak edges to the strong edges.
+If the input pixel is strong or non-relevant, it stays the same in the output, 
+but if the input pixel is weak, all 8 neighboring pixels of the input are checked: 
+If none of the 8 neghboring pixels are strong, 
+then the output corresponding to the input pixel is non-relevant (black), 
+otherwise the output is strong (white).
+```text
+-------------
+|   |   |   |
+-------------
+|   | x |   |           // x is the input pixel compared with the 8 neighboring pixels
+-------------
+|   |   |   |
+-------------
+```
+This steps uses the line buffer and the sliding window to check the 8 neighboring pixels.
 
-| Input image (grayscaled)                 | Edge tracking by hysteresis image (**Final result**)   |
-| ---------------------------------------- | ------------------------------------------------------ |
-| ![grayscale](pictures/hls/grayscale.png) | ![edge-tracking-by-hysteresis](pictures/hls/canny.png) |
+| Input image (double threshold)                  | Edge tracking by hysteresis image (**Final result**)   |
+| ----------------------------------------------- | ------------------------------------------------------ |
+| ![grayscale](pictures/hls/double_threshold.png) | ![edge-tracking-by-hysteresis](pictures/hls/canny.png) |
+
 ## Comparison between Canny with and without non-maximum suppression
 
 | Canny image                        | Canny image (without non-maximum suppression) |
@@ -181,9 +209,9 @@ Despite the result is not clear in the image below, the effect is more visible o
 
 # CV2 python vs HLS
 
-| Input image | CV2 Canny image | Our Canny image |
-| ----------- | --------------- | --------------- |
-| ![img](pictures/hls/img.jpg) | ![cv2](pictures/hls/cv2-canny.png) | ![ours](pictures/hls/canny.png) |
+| Input image                    | CV2 Canny image                      | Our Canny image                   |
+| ------------------------------ | ------------------------------------ | --------------------------------- |
+| ![img](pictures/hls/img.jpg)   | ![cv2](pictures/hls/cv2-canny.png)   | ![ours](pictures/hls/canny.png)   |
 | ![img](pictures/hls/img-2.jpg) | ![cv2](pictures/hls/cv2-canny-2.png) | ![ours](pictures/hls/canny-2.png) |
 | ![img](pictures/hls/img-3.jpg) | ![cv2](pictures/hls/cv2-canny-3.png) | ![ours](pictures/hls/canny-3.png) |
 
