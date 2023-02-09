@@ -14,9 +14,11 @@ The Canny edge detector uses a multi-stage algorithm to detect a wide range of e
 | Jupyter notebook for Pynq-Z1 and Pynq-Z2 | [jupyter-canny/](jupyter-canny) |
 
 ## Index
+- [Setup](#setup)
 - [Algorithm](#algorithm)
 - [Software Implementation](#software-implementation)
 - [Hardware Implementation in HLS](#hardware-implementation-in-hls)
+  
 
 
 # Setup
@@ -67,8 +69,8 @@ The sliding window is a 2D array that is moved over the line buffer to perform t
 ![sliding-window](pictures/sliding-window.png)
 
 ## HLS substages implementation
-
-### Grayscale conversion
+----------
+### 0. Grayscale conversion
 It is a preprocessing step that converts the input image to grayscale. The HLS code is implemented in the [grayscale.cpp](hls-canny/grayscale.cpp) file.
 There are multiple ways to convert an image to grayscale. The HLS code uses the following formula:
     
@@ -78,11 +80,11 @@ We chose to use this approximation instead of other well known approaches since 
 
     Gray = (Red + Green << 1 + Blue) >> 2
 
-| Input image                  | Grayscale image                      |
-| ---------------------------- | ------------------------------------ |
-| ![input](pictures/input.jpg) | ![grayscale](pictures/grayscale.png) |
+| Input image                  | Grayscale image                          |
+| ---------------------------- | ---------------------------------------- |
+| ![input](pictures/input.jpg) | ![grayscale](pictures/hls/grayscale.png) |
 
-### Noise reduction -Ggaussian blur
+### 1. Noise reduction -Ggaussian blur
 The Canny algorithm is extremely sensitive to noise. Noise reduction allows to detect better the edges in the image.
 The Gaussian blur is a common technique used to reduce noise in images using a convolution kernel.
 
@@ -100,11 +102,11 @@ $$\begin{equation*}
     \end{bmatrix}
 \end{equation*}$$
 
-| Input image (grayscaled)             | Gaussian blur image                          |
-| ------------------------------------ | -------------------------------------------- |
-| ![grayscale](pictures/grayscale.png) | ![gaussian-blur](pictures/gaussian-blur.png) |
+| Input image (grayscaled)                 | Gaussian blur image                              |
+| ---------------------------------------- | ------------------------------------------------ |
+| ![grayscale](pictures/hls/grayscale.png) | ![gaussian-blur](pictures/hls/gaussian-blur.png) |
 
-### Gradient calculation - Sobel
+### 2. Gradient calculation - Sobel
 This step of the pipeline, the intensity and direction of the edges are detected. 
 An edge is a sudden change in the intensity of the image. 
 The Sobel operator is used to calculate the intensity gradient of the image.
@@ -137,12 +139,12 @@ $tan(x, y) \approx \frac{I_y}{I_x}$ this value is compared with known values of 
 - Positive slope: 45° or 225° (*from 22.5° to 67.5°*)
 - Negative slope: 135° or 315° (*from 112.5° to 157.5°*)
 
-| Input image (grayscaled)             | Sobel image                               |
-| ------------------------------------ | ----------------------------------------- |
-| ![grayscale](pictures/grayscale.png) | ![gradient-magnitude](pictures/sobel.png) |
+| Input image (grayscaled)                 | Sobel image                                   |
+| ---------------------------------------- | --------------------------------------------- |
+| ![grayscale](pictures/hls/grayscale.png) | ![gradient-magnitude](pictures/hls/sobel.png) |
 
 
-### Non-maximum suppression
+### 3. Non-maximum suppression
 Ideally the final image should have thinner the edges.
 The non-maximum suppression step is used to thin the edges in the image.
 The gradient direction is used to determine the direction of the edge and the gradient magnitude is used to determine the strength of the edge.
@@ -153,72 +155,35 @@ If the intensity of either one of the 2 pixels is higher than the processed pixe
 The line buffer and the sliding window are used for the comparison in this step.
 
 Despite the result is not clear in the image below, the effect is more visible once all the steps are combined. In fact in the end we provide a comparison between canny with and without the non maximum suppression step.
-| Input image (grayscaled)             | Non-maximum suppression image                                    |
-| ------------------------------------ | ---------------------------------------------------------------- |
-| ![grayscale](pictures/grayscale.png) | ![non-maximum-suppression](pictures/non-maximum-suppression.png) |
+| Input image (grayscaled)                 | Non-maximum suppression image                                        |
+| ---------------------------------------- | -------------------------------------------------------------------- |
+| ![grayscale](pictures/hls/grayscale.png) | ![non-maximum-suppression](pictures/hls/non-maximum-suppression.png) |
 
-### Double threshold
+### 4. Double threshold
 
-| Input image (grayscaled)             | Double threshold image                             |
-| ------------------------------------ | -------------------------------------------------- |
-| ![grayscale](pictures/grayscale.png) | ![double-threshold](pictures/double-threshold.png) |
+| Input image (grayscaled)                 | Double threshold image                                 |
+| ---------------------------------------- | ------------------------------------------------------ |
+| ![grayscale](pictures/hls/grayscale.png) | ![double-threshold](pictures/hls/double-threshold.png) |
 
-### Edge tracking by hysteresis
+### 5. Edge tracking by hysteresis (**last pipeline stage**)
 
-| Input image (grayscaled)             | Edge tracking by hysteresis image (**Final result**) |
-| ------------------------------------ | ---------------------------------------------------- |
-| ![grayscale](pictures/grayscale.png) | ![edge-tracking-by-hysteresis](pictures/canny.png)   |
-### Comparison between Canny with and without non-maximum suppression
+| Input image (grayscaled)                 | Edge tracking by hysteresis image (**Final result**)   |
+| ---------------------------------------- | ------------------------------------------------------ |
+| ![grayscale](pictures/hls/grayscale.png) | ![edge-tracking-by-hysteresis](pictures/hls/canny.png) |
+## Comparison between Canny with and without non-maximum suppression
 
-| Canny image                    | Canny image (without non-maximum suppression) |
-| ------------------------------ | --------------------------------------------- |
-| ![canny](pictures/canny.png)   | ![canny](pictures/canny-no-nms.png)           |
-| ![canny](pictures/canny-2.png) | ![canny](pictures/canny-2-no-nms.png)         |
-| ![canny](pictures/canny-2.png) | ![canny](pictures/canny-2-no-nms.png)         |
-
-## Add custom IP
-- Use the example `run.tcl` tcl file to setup the IP diagram on Vivado. `source run.tcl`
-- Insert the custom IP there in the video module of the block design.
-- Add another AXI master to the interconnect IP already present in the video block.
-- Connect the IP to **142 MHz** clock and the corresponding **reset**.
-
-## Other details
-- When writing the HLS code, note that it is not software to be executed, but rather a **description of hardware to be generated**.
-- Variables will become either wires or registers.
-- **Keep track** of how each variable is used. **Think** about hoe the code will be synthesized.
-- **HLS also includes several OpenCV functions that can be used in hardware**. These functions provide high-level functionality.
-- Target clock **142 MHz**, set the solution synthesis settings using 7ns. *Default frequency of resolution 1128x720 pixels*
-- `streamulator` is useful fot testing.
-- To use the streamulator both the .cpp and .h files have to be added to the HLS project as simulator source
-
-## Hardware testing
-- The student should be confident about whether the code will produce a useful result, to avoid excess time spent waiting. 
-- A good idea is to add a control port which allows certain parts of the algorithm to be turned on and off; this can even be left in to provide control of the final block.
-- To test a processing block design, the HDMI ports have to be connected directly to each other in Python.
-- When done testing, it should be noted that the HDMI connection has to be closed.
-- Measuring performance using only the framerate (Video source has 60 fps) **will not yield improvements**. **Other metrics** are needed.
-- For example, adding more stages to a video processing pipeline does not impact throughput, but instead adds to the total latency. This can be also used as a metric.
-- Also the total utilized area of one's design.
-
-# Report
-Link to overleaf document: [report](https://www.overleaf.com/2341325728xzbrcdhtqtpd).
-
-| Done                 | Part                                      |
-| -------------------- | ----------------------------------------- |
-| :white_large_square: | Descritption of the project functionality |
-| :white_large_square: | Experimental setup                        |
-| :white_large_square: | Experimental results                      |
-| :white_large_square: | Reflection on chosen approach             |
-| :white_large_square: | Reflection on achievements                |
+| Canny image                        | Canny image (without non-maximum suppression) |
+| ---------------------------------- | --------------------------------------------- |
+| ![canny](pictures/hls/canny.png)   | ![canny](pictures/hls/canny-no-nms.png)       |
+| ![canny](pictures/hls/canny-2.png) | ![canny](pictures/hls/canny-2-no-nms.png)     |
+| ![canny](pictures/hls/canny-3.png) | ![canny](pictures/hls/canny-3-no-nms.png)     |
 
 
-# Image comparisons
+# CV2 python vs HLS
 
-|                  |                                                                        |                                                                        |                                                              |                                                                                    |
-| ---------------- | :--------------------------------------------------------------------: | :--------------------------------------------------------------------: | :----------------------------------------------------------: | :--------------------------------------------------------------------------------: |
-| Origin           |        ![picture-1](py-canny/pictures/origin/Noise-Image.1.jpg)        |        ![picture-2](py-canny/pictures/origin/Noise-Image.2.png)        |        ![picture-3](py-canny/pictures/origin/img.png)        |        ![picture-4](py-canny/pictures/origin/double-thresholding-image.png)        |
-| Denoised         |  ![picture-1](py-canny/pictures/1_denoise/denoised-Noise-Image.1.jpg)  |  ![picture-2](py-canny/pictures/1_denoise/denoised-Noise-Image.2.png)  |  ![picture-3](py-canny/pictures/1_denoise/denoised-img.png)  |  ![picture-4](py-canny/pictures/1_denoise/denoised-double-thresholding-image.png)  |
-| Sobel            |    ![picture-1](py-canny/pictures/2_sobel/sobel-Noise-Image.1.jpg)     |    ![picture-2](py-canny/pictures/2_sobel/sobel-Noise-Image.2.png)     |    ![picture-3](py-canny/pictures/2_sobel/sobel-img.png)     |    ![picture-4](py-canny/pictures/2_sobel/sobel-double-thresholding-image.png)     |
-| Non max          | ![picture-1](py-canny/pictures/3_non_max/non_max_supNoise-Image.1.jpg) | ![picture-2](py-canny/pictures/3_non_max/non_max_supNoise-Image.2.png) | ![picture-3](py-canny/pictures/3_non_max/non_max_supimg.png) | ![picture-4](py-canny/pictures/3_non_max/non_max_supdouble-thresholding-image.png) |
-| Double threshold |   ![picture-1](py-canny/pictures/4_thresh/thresh-Noise-Image.1.jpg)    |   ![picture-2](py-canny/pictures/4_thresh/thresh-Noise-Image.2.png)    |   ![picture-3](py-canny/pictures/4_thresh/thresh-img.png)    |   ![picture-4](py-canny/pictures/4_thresh/thresh-double-thresholding-image.png)    |
-| Canny final      |    ![picture-1](py-canny/pictures/5_canny/canny-Noise-Image.1.jpg)     |    ![picture-2](py-canny/pictures/5_canny/canny-Noise-Image.2.png)     |    ![picture-3](py-canny/pictures/5_canny/canny-img.png)     |    ![picture-4](py-canny/pictures/5_canny/canny-double-thresholding-image.png)     |
+| Input image | CV2 Canny image | Our Canny image |
+| ----------- | --------------- | --------------- |
+| ![img](pictures/hls/img.jpg) | ![cv2](pictures/hls/cv2-canny.png) | ![ours](pictures/hls/canny.png) |
+| ![img](pictures/hls/img-2.jpg) | ![cv2](pictures/hls/cv2-canny-2.png) | ![ours](pictures/hls/canny-2.png) |
+| ![img](pictures/hls/img-3.jpg) | ![cv2](pictures/hls/cv2-canny-3.png) | ![ours](pictures/hls/canny-3.png) |
+
