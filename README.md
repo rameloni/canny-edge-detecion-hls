@@ -7,11 +7,12 @@ The Canny edge detector uses a multi-stage algorithm to detect a wide range of e
 
 ## Deliverables
 <!-- :white_large_square: and :heavy_check_mark: -->
-| Deliverable                              | Location                        |
-| ---------------------------------------- | ------------------------------- |
-| Python implementation (software)         | [py-canny/](py-canny)           |
-| HLS implementation (hardware)            | [hls-canny/](hls-canny)         |
-| Jupyter notebook for Pynq-Z1 and Pynq-Z2 | [jupyter-canny/](jupyter-canny) |
+| Deliverable                              | Location                                         |
+| ---------------------------------------- | ------------------------------------------------ |
+| Python implementation (software)         | [py-canny/](py-canny)                            |
+| HLS implementation (hardware)            | [hls-canny/](hls-canny)                          |
+| Bitstreams                               | [hls-canny/deliverables](hls-canny/deliverables) |
+| Jupyter notebook for Pynq-Z1 and Pynq-Z2 | [jupyter-canny/](jupyter-canny)                  |
 
 ## Index
 - [Setup](#setup)
