@@ -77,7 +77,7 @@ void hfilt (pixel_stream &src, pixel_stream &dst, uint8_t l, uint8_t c, uint8_t 
 	else
 		x++;
 }
-//
+
 //void stream (pixel_stream &src, pixel_stream &dst, int frame)
 //{
 //	hfilt(src, dst, 50, 150, 50);

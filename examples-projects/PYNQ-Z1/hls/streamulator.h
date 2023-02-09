@@ -25,7 +25,7 @@
 
 #define FRAMES_LIST "inframes/frames.txt"
 
-//#define RAW_FILENAME "outframes/raw.png"
+//#define RAW_FILENAME "../../../../outframes/raw.png"
 
 
 // Pixel and stream types
