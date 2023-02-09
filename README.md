@@ -18,7 +18,8 @@ The Canny edge detector uses a multi-stage algorithm to detect a wide range of e
 - [Algorithm](#algorithm)
 - [Software Implementation](#software-implementation)
 - [Hardware Implementation in HLS](#hardware-implementation-in-hls)
-  
+- [CV2 python vs HLS](#cv2-python-vs-hls)
+
 
 
 # Setup
