@@ -24,6 +24,8 @@ The Canny edge detector uses a multi-stage algorithm to detect a wide range of e
 
 
 # Setup
+To see how to setup the HLS and Vivado IP integrator, please refer to the [setup](hls-canny/hls-setup.README.md) file. And how to set the jupyter notebook, please refer to the [jupyter notebook](jupyter-canny/jupyter.README.md) file. 
+While for the python implementation, please refer to the [python implementation](py-canny/python.README.md) file.
 
 # Algorithm
 The Canny edge detection algorithm has 5 stages (plus a preprocessing stage):
