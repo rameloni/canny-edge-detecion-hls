@@ -2,7 +2,7 @@
 The Canny edge detector uses a multi-stage algorithm to detect a wide range of edges in images and has been widely applied in various computer vision systems. 
 ## Authors
 - Raffaele Meloni ([GitHub](https://github.com/rameloni), [LinkedIn](https://www.linkedin.com/in/raffaele-meloni-886a1a208/))
-- Leslie Xu ([GitHub](), [LinkedIn]())
+- Leslie Xu ([GitHub](https://github.com/Lesliehsyu), [LinkedIn](https://www.linkedin.com/in/leslie-shijie-xu-0a157b1a2/))
 - Amirreza Movahedin ([GitHub](https://github.com/AmirrezaMov), [LinkedIn](https://www.linkedin.com/in/amirreza-movahedin-893652151/))
 
 ## Deliverables
