@@ -17,10 +17,10 @@ The Canny edge detector uses a multi-stage algorithm to detect a wide range of e
 ## Index
 - [Setup](#setup)
 - [Algorithm](#algorithm)
+  - [Performances](#performances)
 - [Software Implementation](#software-implementation)
 - [Hardware Implementation in HLS](#hardware-implementation-in-hls)
 - [CV2 python vs HLS](#cv2-python-vs-hls)
-
 
 
 # Setup
@@ -38,6 +38,18 @@ The Canny edge detection algorithm has 5 stages (plus a preprocessing stage):
 
 ![canny-pipeline](pictures/canny-pipeline-.png)
 
+## Performances
+
+The tests on software and hardware have been performed with the following conditions:
+- The software version was tested with an `Asus ROG Zephyrus G14 GA401Q (2020) with 16 GB RAM and AMD Ryzen 7 3200Mhz CPU, OS Ubuntu 20.04 LTS`.
+- Both hardware and software version were tested with an input resolution of `1280x720` pixels.
+
+| Implementation | Speed (single image)                         | Framerate           | LUTs (%) | FFs (%) | MUXs (%) | Total On-chip Power (W) |
+| -------------- | -------------------------------------------- | ------------------- | -------- | ------- | -------- | ----------------------- |
+| Software       | 0.81s                                        | 1.24fps (estimated) | NA       | NA      | NA       | NA                      |
+| Hardware       | NA (*Directly tested with target framerate*) | 60fps               | 30.98    | 24.12   | 2.23     | 2.014                   |
+
+The numbers prove that the hardware implementation outperforms its relative software version about ~60 times faster.
 
 # Software Implementation
 <!-- :white_large_square: and :heavy_check_mark: -->
